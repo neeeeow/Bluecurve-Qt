@@ -12,6 +12,8 @@ public:
 	BluecurveStyle();
     virtual ~BluecurveStyle();
 
+	void polish(QWidget *widget);
+
 	void drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 					   QPainter *p, const QWidget *widget) const override;
 
@@ -50,8 +52,6 @@ protected:
 	const BluecurveColorData *lookupData (const QPalette &palette) const;
 
 	void getShade (const QPalette &palette, int shadenr, QColor &res) const;
-
-	bool eventFilter(QObject *object, QEvent *event);
 
 	void drawTextRect(QPainter *p, const QStyleOption *opt,
 					  const QBrush *fill) const;

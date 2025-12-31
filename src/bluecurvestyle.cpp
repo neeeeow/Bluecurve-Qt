@@ -10,6 +10,8 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include <QMenu>
+#include <QComboBox>
+#include <QScrollBar>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -320,45 +322,6 @@ hashColorGroup (const QPalette &palette)
 	return palette.button().color().rgb() << 8 ^ palette.highlight().color().rgb();
 }
 
-struct BluecurveStylePrivate
-{
-	BluecurveStylePrivate()
-		: hoverWidget(0), hovering(false), sliderActive(false), mousePressed(false),
-		  scrollbarElement(0), lastElement(0), ref(1)
-		{ ; }
-
-	QPointer<QWidget> hoverWidget;
-	bool hovering, sliderActive, mousePressed;
-	int scrollbarElement, lastElement, ref;
-	QPoint mousePos;
-};
-
-static BluecurveStylePrivate * singleton = 0;
-
-BluecurveStyle::BluecurveStyle() : QCommonStyle(), m_dataCache ()
-{
-	if ( !singleton )
-		singleton = new BluecurveStylePrivate;
-	else
-		singleton->ref++;
-	
-	basestyle = QStyleFactory::create("Windows"); // Original theme used MotifPlus, but this is no longer available, so we use Windows.
-	if ( ! basestyle )
-		qFatal( "BluecurveStyle: couldn't find a base style!" );
-	
-}
-
-BluecurveStyle::~BluecurveStyle()
-{
-	if ( singleton && singleton->ref-- <= 0) {
-		delete singleton;
-		singleton = 0;
-	}
-	
-	delete basestyle;
-}
-
-
 BluecurveStyle::BluecurveColorData::~BluecurveColorData()
 {
 	int i;
@@ -377,10 +340,31 @@ BluecurveStyle::BluecurveColorData::~BluecurveColorData()
 	}
 }
 
-/************************************************************************/
-/* Realize and unrealize functions go here, we deal with those in a bit */
-/************************************************************************/
+BluecurveStyle::BluecurveStyle() : QCommonStyle(), m_dataCache ()
+{	
+	basestyle = QStyleFactory::create("Windows"); // Original theme used MotifPlus, but this is no longer available, so we use Windows.	
+}
 
+BluecurveStyle::~BluecurveStyle()
+{
+	delete basestyle;
+}
+
+void
+BluecurveStyle::polish(QWidget *widget)
+{
+	if (qobject_cast<QAbstractButton *>(widget) ||
+		qobject_cast<QComboBox *>(widget))
+		widget->setAttribute(Qt::WA_Hover, true);
+
+	if (qobject_cast<QScrollBar *>(widget) ||
+		qobject_cast<QAbstractSlider *>(widget)) {
+		widget->setMouseTracking(true);
+		widget->setAttribute(Qt::WA_Hover, true);
+	}
+	
+	QCommonStyle::polish(widget);
+}
 
 BluecurveStyle::BluecurveColorData *
 BluecurveStyle::realizeData (const QPalette &palette) const
@@ -511,80 +495,6 @@ BluecurveStyle::getShade (const QPalette &palette, int shadenr, QColor &res) con
 	res = cdata->shades[shadenr];
 }
 
-bool
-BluecurveStyle::eventFilter(QObject *object, QEvent *event)
-{
-
-	switch(event->type()) {
-	case QEvent::MouseButtonPress: {
-		singleton->mousePressed = true;
-
-		if (! object->inherits("QSlider"))
-			break;
-
-		singleton->sliderActive = true;
-		break;
-	}
-
-	case QEvent::MouseButtonRelease: {
-		singleton->mousePressed = false;
-
-		if (! object->inherits("QSlider"))
-			break;
-
-		singleton->sliderActive = false;
-		((QWidget *) object)->repaint();
-		break;
-	}
-
-	case QEvent::Enter: {
-		if (! object->isWidgetType())
-			break;
-
-		singleton->hoverWidget = (QWidget *) object;
-		if (! singleton->hoverWidget->isEnabled()) {
-			singleton->hoverWidget = 0;
-			break;
-		}
-		singleton->hoverWidget->repaint();
-		break;
-	}
-
-	case QEvent::Leave: {
-		if (object != singleton->hoverWidget)
-			break;
-		QWidget *w = singleton->hoverWidget;
-		singleton->hoverWidget = 0;
-		w->repaint();
-		break;
-	}
-
-	case QEvent::MouseMove: {
-		if (! object->isWidgetType() || object != singleton->hoverWidget)
-			break;
-
-		if (! object->inherits("QScrollBar") && ! object->inherits("QSlider"))
-			break;
-
-		singleton->mousePos = ((QMouseEvent *) event)->pos();
-		if (! singleton->mousePressed) {
-			singleton->hovering = true;
-			singleton->hoverWidget->repaint();
-			singleton->hovering = false;
-		}
-
-		break;
-		}
-
-	default: {
-		break;
-	}
-		
-	}
-
-	return QCommonStyle::eventFilter(object, event);
-}
-
 void
 BluecurveStyle::drawTextRect(QPainter *p, const QStyleOption *opt,
 							 const QBrush *fill) const
@@ -631,7 +541,7 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 
 	p->setPen(dark ? cdata->shades[6] : cdata->shades[5]);
-	p->drawRect(r);
+    p->drawRect(r.adjusted(0, 0, -1, -1));
 
 	if (opt->state & (QStyle::State_On |
 					  QStyle::State_Sunken | QStyle::State_Raised)) {
@@ -644,7 +554,7 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 
 		p->setPen(sunken ? cdata->shades[2] : Qt::white);
 		p->drawLine(r.x() + 1, r.y() + 2,
-					r.x() + 1, r.y() + r.height() - 3); // left
+					r.x() + 1, r.y() + r.height() - 2); // left
 		p->drawLine(r.x() + 1, r.y() + 1,
 					r.x() + r.width() - 2, r.y() + 1); // top
 
@@ -698,6 +608,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			fill = &opt->palette.brush(QPalette::Window);
 
 		drawLightBevel(p, opt, fill, true);
+		break;
+	}
+
+	case PE_FrameButtonBevel:
+	case PE_FrameButtonTool: {
+		drawLightBevel(p, opt, 0, true);
 		break;
 	}
 
@@ -985,9 +901,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 
-	if (widget == singleton->hoverWidget) {
+	/*if (widget == singleton->hoverWidget) {
 		flags |= State_MouseOver;
-	}
+		}*/
 
 	switch (control) {
 		/*case CE_PushButtonLabel: {
@@ -1077,12 +993,18 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		QRect fr(r);
 
 		tr.adjust(0, 0,  0, -1); // NB: adjust replaces addCoords
-		fr.adjust(2, 2, -2, -2);
+		fr.adjust(1, 2, -2, -2);
 
 		if ( tb->shape() == QTabBar::RoundedSouth || tb->shape() == QTabBar::TriangularSouth) {
 			tr = r; tr.adjust(0, 1, 0, 0);
 			fr = r; fr.adjust(2, 2,-2, -2);
 			below=true;
+		}
+
+		if (tr.left() != 0) {
+			// ensure tabs borders overlap
+			tr.adjust(-1,0,0,0);
+			fr.adjust(-1,0,0,0);
 		}
 
 		if (! (opt->state & State_Selected)) {
@@ -1093,9 +1015,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				tr.adjust(0, 1, 0, 0);
 				fr.adjust(0, 1, 0, 0);
 			}
+			
+			if (tr.left() == 0)
+				fr.adjust(1,0,0,0);
 
 			p->setPen(cdata->shades[6]);
-			p->drawRect(tr);
+			p->drawRect(tr.adjusted(0,0,-1,-1));
 
 			if (tr.left() == 0)
 				if (below)
@@ -1104,28 +1029,25 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 					p->drawPoint(tr.left(), tr.bottom() + 1);
 
 			p->setPen(palette.light().color());
-			if (!below) {
+			if (!below)
 				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1);
-				if (tr.left() == 0)
-					p->drawLine(tr.left() + 1, tr.bottom() + 1,	tr.right(), tr.bottom() + 1);
-				else
-					p->drawLine(tr.left(), tr.bottom() + 1,	tr.right(), tr.bottom() + 1);
-			}
+			if (tr.left() == 0)
+				p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - 1);
 
 			p->setPen(cdata->shades[2]);
-			if (below) {
-				p->drawLine(tr.left() + 1, tr.bottom() - 1,	tr.right() - 1, tr.bottom() - 1);
-				if (tr.left() == 0)
-					p->drawLine(tr.left() + 1, tr.top() - 1, tr.right(), tr.top() - 1);
-				else
-					p->drawLine(tr.left(), tr.top() - 1, tr.right(), tr.top() - 1);
-				p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - 2);
-				p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() - 2);
-			} else {
-				p->drawLine(tr.left() + 1, tr.top() + 2, tr.left() + 1, tr.bottom() - 1);
-				p->drawLine(tr.right() - 1, tr.top() + 2, tr.right() - 1, tr.bottom() - 1);
-			}
+			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() - 1);
+			if (below)
+				p->drawLine(tr.left() + 2, tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1);
+
 		} else {
+
+			fr.adjust(1,0,0,2); // ensure tab goes over the tab contents
+			if (tr.left() != 0) {
+				// selected tab borders move over to the left by 1px
+				tr.adjust(-1,0,0,0);
+				fr.adjust(-1,0,0,0);
+			}
+			
 			p->setPen(cdata->shades[6]);
 			if (below) {
 				p->drawLine(tr.left(), tr.bottom() - 1,	tr.left(), tr.top() - 1);
@@ -1146,8 +1068,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				if (tr.left() != 0)
 					p->drawPoint(tr.left(), tr.bottom() + 1);
 
-				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1);
-				p->drawPoint(tr.right(), tr.bottom() + 1);
+				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 2, tr.top() + 1);
 			}
 
 			p->setPen(cdata->shades[2]);
@@ -1157,11 +1078,11 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				p->drawLine(tr.left() + 2, tr.bottom() - 1,	tr.right() - 1, tr.bottom() - 1);
 				p->drawLine(tr.right() - 1, tr.top() - 1, tr.right() - 1, tr.bottom() - 2);
 			} else {
-				p->drawLine(tr.right() - 1, tr.top() + 2, tr.right() - 1, tr.bottom() + 1);
+				p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() + 1);
 			}
 		}		
 
-		p->fillRect(fr, ((opt->state & State_Selected) ?	palette.window().color() : cdata->shades[2]));
+		p->fillRect(fr, ((opt->state & State_Selected) ?	palette.window().color() : palette.dark().color()));
 		break;
 	}
 
@@ -1276,7 +1197,34 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		QString text = miOpt->text;
 		if (! text.isNull()) {
 			int t = (int)text.indexOf('\t');
-			
+
+			// draw accelerator/tab-text
+			if (t >= 0) {
+				int alignFlag = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
+				alignFlag |= ( reverse ? Qt::AlignLeft : Qt::AlignRight );
+				if (! (opt->state & State_Enabled)) {
+					p->setPen(embosscolor);
+					tr.translate(1, 1);
+					p->drawText(tr, alignFlag, text.mid(t + 1));
+					tr.translate(-1, -1);
+					p->setPen(textcolor);
+				}
+
+				p->drawText(tr, alignFlag, text.mid(t + 1));
+			}
+
+			int alignFlag = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
+			alignFlag |= ( reverse ? Qt::AlignLeft : Qt::AlignRight );
+
+			if (! (opt->state & State_Enabled)) {
+				p->setPen(embosscolor);
+				ir.translate(1, 1);
+				p->drawText(ir, alignFlag, text);
+				ir.translate(-1, -1);
+				p->setPen(textcolor);
+			}
+
+			p->drawText(ir, alignFlag, text);
 		}
 		
 	}
