@@ -20,6 +20,9 @@ public:
 	void drawControl(ControlElement control, const QStyleOption *opt,
 					 QPainter *p, const QWidget *widget) const override;
 
+	int pixelMetric(PixelMetric metric, const QStyleOption *opt = nullptr,
+					const QWidget *widget = nullptr) const override;
+
 	int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget,
 				  QStyleHintReturn *hret) const override;
 

@@ -355,12 +355,12 @@ BluecurveStyle::~BluecurveStyle()
 void
 BluecurveStyle::polish(QWidget *widget)
 {
-	if (qobject_cast<QAbstractButton *>(widget) ||
-		qobject_cast<QComboBox *>(widget))
+	if (widget->inherits("QAbstractButton") ||
+		widget->inherits("QComboBox"))
 		widget->setAttribute(Qt::WA_Hover, true);
 
-	if (qobject_cast<QScrollBar *>(widget) ||
-		qobject_cast<QAbstractSlider *>(widget)) {
+	if (widget->inherits("QScrollBar") ||
+		widget->inherits("QAbstractSlider")) {
 		widget->setMouseTracking(true);
 		widget->setAttribute(Qt::WA_Hover, true);
 	}
@@ -1236,13 +1236,153 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 }
 
 int
+BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
+							const QWidget *widget) const
+{
+	int ret;
+	
+	switch (metric) {
+	case PM_ButtonMargin: {
+		ret = 10;
+		break;
+	}
+
+	case PM_ButtonShiftHorizontal:
+	case PM_ButtonShiftVertical: {
+		ret = 0;
+		break;
+	}
+
+	case PM_ButtonDefaultIndicator: {
+		ret = 0;
+		break;
+	}
+
+	case PM_ButtonIconSize: {
+		ret = 20;
+		break;
+	}
+
+	case PM_DefaultFrameWidth: {
+		if (widget && widget->inherits("QMenu")) {
+			ret = 3;
+		} else if (widget && widget->inherits("QStackedWidget")) {
+			ret = 2;
+		} else {
+			ret = 1;
+		}
+		break;
+	}
+
+	case PM_IndicatorWidth:
+	case PM_IndicatorHeight:
+	case PM_ExclusiveIndicatorWidth:
+	case PM_ExclusiveIndicatorHeight: {
+		ret = 13;
+		break;
+	}
+
+	case PM_MenuVMargin: {
+		ret = 1;
+		break;
+	}
+
+		/*case PM_TabBarTabOverlap: { seems to have no effect in Qt6
+		ret = 1;
+		break;
+		}*/
+
+	case PM_TabBarTabHSpace: {
+		ret = 10;
+		break;
+	}
+
+	case PM_TabBarTabVSpace: {
+		ret = 10;
+		break;
+	}
+
+	case PM_TabBarBaseOverlap: {
+		ret = 2;
+		break;
+	}
+
+	case PM_ScrollBarExtent: {
+		ret = 15;
+		break;
+	}
+
+	case PM_MenuBarPanelWidth: {
+		ret = 1;
+		break;
+	}
+
+	case PM_ProgressBarChunkWidth: {
+		ret = 2;
+		break;
+	}
+
+	case PM_DockWidgetSeparatorExtent: {
+		ret = 4;
+		break;
+	}
+
+	case PM_DockWidgetHandleExtent: {
+		ret = 10;
+		break;
+	}
+
+	case PM_SplitterWidth: {
+		ret = 6;
+		break;
+	}
+
+	case PM_ScrollBarSliderMin: {
+		ret=31;
+		break;
+	}
+
+	case PM_SliderControlThickness: {
+		ret = basestyle->pixelMetric( metric, opt, widget );
+		break;
+	}
+
+	case PM_SliderLength: {
+		ret=31;
+		if (widget->inherits("QSlider")) {
+			const QSlider *slider = static_cast<const QSlider*>(widget);
+			if (slider->orientation() == Qt::Horizontal) {
+				if (widget->width()<ret)
+					ret = widget->width();
+			} else {
+				if (widget->height()<ret)
+					ret = widget->height();
+			}
+		}
+		break;
+	}
+
+	case PM_MaximumDragDistance: {
+		ret = -1;
+		break;
+	}
+		
+	default:
+		ret = QCommonStyle::pixelMetric(metric, opt, widget);
+		break;
+	}
+
+	return ret;
+}
+
+int
 BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 						  const QWidget *widget,
 						  QStyleHintReturn *hret) const
 {
 	int ret;
 	
-	switch(sh) {
+	switch (sh) {
 	case SH_EtchDisabledText:
 	case SH_Slider_SnapToValue:
 	case SH_PrintDialog_RightAlignButtons:
