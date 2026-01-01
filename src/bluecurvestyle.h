@@ -23,7 +23,7 @@ public:
 	int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget,
 				  QStyleHintReturn *hret) const override;
 
-protected:
+private:
 	struct BluecurveColorData {
 		QRgb buttonColor;
 		QRgb spotColor;

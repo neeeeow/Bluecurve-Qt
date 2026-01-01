@@ -342,7 +342,9 @@ BluecurveStyle::BluecurveColorData::~BluecurveColorData()
 
 BluecurveStyle::BluecurveStyle() : QCommonStyle(), m_dataCache ()
 {	
-	basestyle = QStyleFactory::create("Windows"); // Original theme used MotifPlus, but this is no longer available, so we use Windows.	
+	basestyle = QStyleFactory::create("Windows"); // Original theme used MotifPlus, but this is no longer available, so we use Windows.
+	if (!basestyle)
+		qFatal( "BluecurveStyle: couldn't find a base style!" );
 }
 
 BluecurveStyle::~BluecurveStyle()
@@ -620,11 +622,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorMenuCheckMark: {
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
-		if (opt->state & State_Active) {
+		if (opt->state & (State_Selected | State_Open))
 			p->drawPixmap(qp, *(cdata->checkMark[0]));
-		} else {
+		else
 			p->drawPixmap(qp, *(cdata->checkMark[1]));
-		}
+
 		break;		
 	}
 
@@ -858,7 +860,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 					 (r.y() + r.height() / 2));
 		
 		if ( opt->state & State_Enabled )
-			p->setPen( opt->state & (State_Active | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
+			p->setPen( opt->state & (State_Selected | State_Open | State_Sunken | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
 		else
 			p->setPen(cdata->shades[7]);
 
@@ -900,11 +902,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	QStyle::State flags = opt->state;
 	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
-
-	/*if (widget == singleton->hoverWidget) {
-		flags |= State_MouseOver;
-		}*/
-
+	
 	switch (control) {
 		/*case CE_PushButtonLabel: {
 		const QPushButton *button = (const QPushButton *) widget;
@@ -1124,7 +1122,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 		}
 
-		if ((opt->state & State_Active) && (opt->state & State_Enabled)) {
+		if ((opt->state & (State_Selected | State_Open)) && (opt->state & State_Enabled)) {
 			drawGradientBox(p, r, opt->palette, cdata, false, 0.9, 1.2);
 		} else {
 			p->fillRect(r, opt->palette.brush(QPalette::Button));
@@ -1156,7 +1154,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		if (!miOpt->icon.isNull()) {
 			QIcon::Mode mode =
 				(opt->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled;
-			if ((opt->state & State_Active) && (opt->state & State_Enabled))
+			if ((opt->state & (State_Selected | State_Open)) && (opt->state & State_Enabled))
 				mode = QIcon::Active;
 			QPixmap pixmap;
 			if (miOpt->menuHasCheckableItems && miOpt->checked)
@@ -1169,14 +1167,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawPixmap(pmr.topLeft(), pixmap);
 		} else if (miOpt->menuHasCheckableItems && miOpt->checked) {
 			QStyleOption checkOpt;
-			checkOpt.state = opt->state & (State_Enabled|State_Active);
+			checkOpt.state = opt->state & (State_Enabled|State_Selected|State_Open);
 			checkOpt.rect = cr;
 			checkOpt.palette = opt->palette;
 			drawPrimitive(PE_IndicatorMenuCheckMark, &checkOpt, p, widget);
 		}
 		QColor textcolor;
 		QColor embosscolor;
-		if (opt->state & State_Active) {
+		if (opt->state & (QStyle::State_Selected | QStyle::State_Open)) {
 			if (! (opt->state & State_Enabled)) {
 				textcolor = opt->palette.text().color();
 				embosscolor = opt->palette.light().color();
@@ -1188,7 +1186,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			textcolor = palette.text().color();
 			embosscolor = palette.light().color();
 		} else
-			textcolor = embosscolor = palette.buttonText().color();
+			textcolor = embosscolor = palette.buttonText().color();			
 		p->setPen(textcolor);
 
 		// mi->custom() no longer exists in Qt6, I don't believe there to be a modern equivalent
@@ -1335,7 +1333,7 @@ BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
 // 3d border effect...
 	p->setPen(cdata->spots[2]);
 	p->setBrush(Qt::NoBrush);
-	p->drawRect(r);
+	p->drawRect(r.adjusted(0,0,-1,-1));
 
 //	We draw the bottom and right lines first ...
 	p->setPen(cdata->spots[1]);
