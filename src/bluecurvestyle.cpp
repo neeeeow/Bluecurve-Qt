@@ -12,6 +12,7 @@
 #include <QMenu>
 #include <QComboBox>
 #include <QScrollBar>
+#include <QProgressBar>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -622,7 +623,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorMenuCheckMark: {
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
-		if (opt->state & (State_Selected | State_Open))
+		if (opt->state & State_Selected)
 			p->drawPixmap(qp, *(cdata->checkMark[0]));
 		else
 			p->drawPixmap(qp, *(cdata->checkMark[1]));
@@ -860,7 +861,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 					 (r.y() + r.height() / 2));
 		
 		if ( opt->state & State_Enabled )
-			p->setPen( opt->state & (State_Selected | State_Open | State_Sunken | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
+			p->setPen( opt->state & (State_Selected | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
 		else
 			p->setPen(cdata->shades[7]);
 
@@ -1122,7 +1123,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 		}
 
-		if ((opt->state & (State_Selected | State_Open)) && (opt->state & State_Enabled)) {
+		if ((opt->state & State_Selected) && (opt->state & State_Enabled)) {
 			drawGradientBox(p, r, opt->palette, cdata, false, 0.9, 1.2);
 		} else {
 			p->fillRect(r, opt->palette.brush(QPalette::Button));
@@ -1154,7 +1155,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		if (!miOpt->icon.isNull()) {
 			QIcon::Mode mode =
 				(opt->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled;
-			if ((opt->state & (State_Selected | State_Open)) && (opt->state & State_Enabled))
+			if ((opt->state & State_Selected) && (opt->state & State_Enabled))
 				mode = QIcon::Active;
 			QPixmap pixmap;
 			if (miOpt->menuHasCheckableItems && miOpt->checked)
@@ -1167,14 +1168,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawPixmap(pmr.topLeft(), pixmap);
 		} else if (miOpt->menuHasCheckableItems && miOpt->checked) {
 			QStyleOption checkOpt;
-			checkOpt.state = opt->state & (State_Enabled|State_Selected|State_Open);
+			checkOpt.state = opt->state & (State_Enabled|State_Selected);
 			checkOpt.rect = cr;
 			checkOpt.palette = opt->palette;
 			drawPrimitive(PE_IndicatorMenuCheckMark, &checkOpt, p, widget);
 		}
 		QColor textcolor;
 		QColor embosscolor;
-		if (opt->state & (QStyle::State_Selected | QStyle::State_Open)) {
+		if (opt->state & QStyle::State_Selected) {
 			if (! (opt->state & State_Enabled)) {
 				textcolor = opt->palette.text().color();
 				embosscolor = opt->palette.light().color();
@@ -1223,8 +1224,86 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			}
 
 			p->drawText(ir, alignFlag, text);
+		} // mi->pixmap() is deprecated for a long time now, so ignore it
+
+		if (miOpt->menuItemType == QStyleOptionMenuItem::SubMenu) {
+			QStyleOption arrowOpt;
+			arrowOpt.state = opt->state;
+			arrowOpt.rect = sr;
+			arrowOpt.palette = opt->palette;
+			drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrowOpt, p, widget);
 		}
+
+		break;
 		
+	}
+
+	case CE_MenuBarEmptyArea: {
+		p->fillRect(r, palette.brush(QPalette::Button));
+		break;
+	}
+
+	case CE_MenuBarItem: {
+		if ((opt->state & State_Enabled) && (opt->state & State_Sunken))
+			drawGradientBox(p, r, opt->palette, cdata, false, 0.9, 1.2);
+		else
+			p->fillRect(r, opt->palette.brush(QPalette::Button));
+
+		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+
+		if (flags & State_Sunken)
+			drawItemText(p, r, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
+						 opt->palette, opt->state & State_Enabled, miOpt->text, QPalette::HighlightedText);
+		else
+			drawItemText(p, r, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
+						 opt->palette, opt->state & State_Enabled, miOpt->text, QPalette::ButtonText);
+		break;
+	}
+
+	case CE_ProgressBarGroove: {
+		p->setBrush(cdata->shades[3]);
+		p->setPen(cdata->shades[5]);
+		p->drawRect(r.adjusted(0,0,-1,-1));
+		break;
+	}
+
+	case CE_ProgressBarContents: {
+		const QProgressBar *progressbar = static_cast<const QProgressBar *>(widget);
+	    bool reverse = QGuiApplication::isRightToLeft();
+
+		QRect pr;
+
+		if ((progressbar->minimum() == 0) && (progressbar->maximum() == 0)) {
+			int w, remains;
+
+			// draw busy indicator
+
+			w = std::min(25, r.width()/2);
+			w = std::max(w, 1);
+
+			remains = r.width() - w;
+			remains = std::max(remains, 1);
+
+			int x = progressbar->value() % (remains * 2);
+			if (x > remains)
+				x = 2 * remains - x;
+
+			x = reverse ? r.right() - x - w : x + r.left();
+			pr.setRect (x, r.top(), w, r.height());
+		} else {
+			int pos = progressbar->value();
+			int total = (progressbar->maximum() - progressbar->minimum()) ?
+				(progressbar->maximum() - progressbar->minimum()) : 1;
+			int w = (int)(((double)pos*r.width())/total);
+
+			if (reverse)
+				pr.setRect (r.right() - w, r.top(), w, r.height());
+			else
+				pr.setRect (r.left(), r.top(), w, r.height());
+		}
+		drawGradientBox(p, pr, opt->palette, cdata, false, 0.92, 1.66);
+		
+		break;
 	}
 		
 	default: {
