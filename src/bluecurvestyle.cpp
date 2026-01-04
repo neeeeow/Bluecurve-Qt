@@ -13,6 +13,8 @@
 #include <QComboBox>
 #include <QScrollBar>
 #include <QProgressBar>
+#include <QCheckBox>
+#include <QRadioButton>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -620,6 +622,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
+	case PE_FrameDefaultButton: {
+		p->setPen(opt->palette.shadow().color());
+		p->setBrush(Qt::NoBrush);
+		p->drawRect(r.adjusted(0,0,-1,-1));
+		break;
+	}
+
 	case PE_IndicatorMenuCheckMark: {
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
@@ -658,9 +667,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			pix += 2;
 		if (opt->state & State_On)
 			pix += 1;
-
+		
 		p->drawPixmap(r.topLeft(), *cdata->radioPix[pix]);
-
+		
 		break;			
 	}
 
@@ -829,7 +838,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 
 		switch ( pe ) {
 		case PE_IndicatorArrowUp: {
-			a.setPoints(11,   3,1,  0,-2,  -3,1,  -2,0,  -2,2,  0,-1,  2,1,  2,2,  0,0,  -1,1,  1,1);
+		    a.setPoints(11,   3,1,  0,-2,  -3,1,  -2,0,  -2,2,  0,-1,  2,1,  2,2,  0,0,  -1,1,  1,1);
 			break;
 		}
 
@@ -897,10 +906,7 @@ void
 BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 							QPainter *p, const QWidget *widget) const
 {
-	// Quick Qt6 > Qt3 argument conversion
 	const QRect &r = opt->rect;
-	const QPalette &palette = opt->palette;
-	QStyle::State flags = opt->state;
 	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
@@ -1027,7 +1033,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				else
 					p->drawPoint(tr.left(), tr.bottom() + 1);
 
-			p->setPen(palette.light().color());
+			p->setPen(opt->palette.light().color());
 			if (!below)
 				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1);
 			if (tr.left() == 0)
@@ -1058,7 +1064,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				p->drawLine(tr.right(), tr.top() + 1, tr.right(), tr.bottom());
 			}
 
-			p->setPen(palette.light().color());
+			p->setPen(opt->palette.light().color());
 			if (below) {
 				p->drawLine(tr.left() + 1, tr.bottom() - 1,	tr.left() + 1, tr.top() - 2);
 				p->drawPoint(tr.right(), tr.top() - 1);
@@ -1081,7 +1087,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			}
 		}		
 
-		p->fillRect(fr, ((opt->state & State_Selected) ?	palette.window().color() : palette.dark().color()));
+		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : opt->palette.dark().color()));
 		break;
 	}
 
@@ -1184,10 +1190,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				embosscolor = opt->palette.midlight().color().lighter();
 			}
 		} else if (! (opt->state & State_Enabled)) {
-			textcolor = palette.text().color();
-			embosscolor = palette.light().color();
+			textcolor = opt->palette.text().color();
+			embosscolor = opt->palette.light().color();
 		} else
-			textcolor = embosscolor = palette.buttonText().color();			
+			textcolor = embosscolor = opt->palette.buttonText().color();			
 		p->setPen(textcolor);
 
 		// mi->custom() no longer exists in Qt6, I don't believe there to be a modern equivalent
@@ -1239,7 +1245,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_MenuBarEmptyArea: {
-		p->fillRect(r, palette.brush(QPalette::Button));
+		p->fillRect(r, opt->palette.brush(QPalette::Button));
 		break;
 	}
 
@@ -1251,7 +1257,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
 
-		if (flags & State_Sunken)
+		if (opt->state & State_Sunken)
 			drawItemText(p, r, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
 						 opt->palette, opt->state & State_Enabled, miOpt->text, QPalette::HighlightedText);
 		else
@@ -1302,6 +1308,183 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				pr.setRect (r.left(), r.top(), w, r.height());
 		}
 		drawGradientBox(p, pr, opt->palette, cdata, false, 0.92, 1.66);
+		
+		break;
+	}
+
+	case CE_CheckBoxLabel: {
+		const QCheckBox *checkbox = static_cast<const QCheckBox *>(widget);
+		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
+
+		if (opt->state & State_MouseOver) {
+			QRegion r(checkbox->rect());
+			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), checkbox->rect());
+			p->setClipRegion(r);
+			p->fillRect(checkbox->rect(), opt->palette.brush(QPalette::Midlight));
+			p->setClipping(false);
+		}
+
+		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
+		drawItemText(p, r, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
+					 opt->palette, opt->state & State_Enabled, checkboxOpt->text);	
+		
+		break;
+	}
+
+	case CE_RadioButtonLabel: {
+		const QRadioButton *radiobutton = static_cast<const QRadioButton *>(widget);
+		const QStyleOptionButton *radioOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
+
+		if (opt->state & State_MouseOver) {
+			QRegion r(radiobutton->rect());
+			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), radiobutton->rect());
+			p->setClipRegion(r);
+			p->fillRect(radiobutton->rect(), opt->palette.brush(QPalette::Midlight));
+			p->setClipping(false);
+		}
+
+		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
+		drawItemText(p, r, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
+					 opt->palette, opt->state & State_Enabled, radioOpt->text);	
+		
+		break;
+	}
+
+		/* CE's that were PE's in Qt3 go below */
+
+	case CE_HeaderSection: {
+		const QBrush *fill;
+		QStyle::State state = ((opt->state | State_Sunken) ^ State_Sunken) | State_Raised;
+		if (! (state & State_Sunken) && (state & State_On))
+			fill = &opt->palette.brush(QPalette::Midlight);
+		else
+			fill = &opt->palette.brush(QPalette::Button);
+
+	    QStyleOption optCopy(*opt);
+		optCopy.state = state;
+
+		drawLightBevel(p, &optCopy, fill);
+		p->setPen( opt->palette.buttonText().color() );
+		
+		break;
+	}
+
+	case CE_Splitter: {
+		if (opt->state & State_Horizontal) {
+			int y_mid = r.height()/2;
+			for (int i=0; i< 21; i=i+5) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(r.x()+1, y_mid-10+i, r.right()-1, y_mid-10+i-3);
+				p->setPen(opt->palette.light().color());
+				p->drawLine(r.x()+1, y_mid-10+i+1, r.right()-1, y_mid-10+i-2);
+			}
+		} else {
+			int x_mid = r.width()/2;
+			for (int i=0; i< 21; i=i+5) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(x_mid-10+i+3, r.y()+1, x_mid-10+i, r.bottom()-1);
+				p->setPen(opt->palette.light().color());
+				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
+			}
+		}
+	}
+
+	case CE_ScrollBarAddLine:
+	case CE_ScrollBarSubLine: {
+		// Highlight on mouse over
+		QStyleOption optCopy(*opt);
+	    optCopy.state = opt->state | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
+		drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
+
+		PrimitiveElement pe;
+
+		if ((control == CE_ScrollBarAddLine) && (opt->state & State_Horizontal)) {
+			pe = PE_IndicatorArrowRight;
+		} else if (control == CE_ScrollBarAddLine) {
+			pe = PE_IndicatorArrowDown;
+		} else if (opt->state & State_Horizontal) {
+			pe = PE_IndicatorArrowLeft;
+		} else {
+			pe = PE_IndicatorArrowUp;
+		}
+
+		QStyleOption arrowOpt(*opt);
+		arrowOpt.state = opt->state & ~State_MouseOver;
+	    drawPrimitive(pe, &arrowOpt, p, widget);
+	  
+		break;
+	}
+
+	case CE_ScrollBarSubPage:
+	case CE_ScrollBarAddPage: {
+		p->fillRect(r, cdata->shades[3]);
+		p->setPen(cdata->shades[5]);
+		if (opt->state & State_Horizontal) {
+			p->drawLine(r.left(), r.top(), r.right(), r.top());
+			p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+		} else {
+			p->drawLine(r.left(), r.top(), r.left(), r.bottom());
+			p->drawLine(r.right(), r.top(), r.right(), r.bottom());
+		}
+		break;
+	}
+
+	case CE_ScrollBarSlider: {
+		int x1, y1;
+		p->setPen(opt->palette.dark().color());
+		// Not the best place to put this, but it seems to be the only place where it works correctly
+
+		// Expand the slider one pixel in each direction, 
+		// to avoid double lines in the extreme positions.
+		QRect r2 = r;
+		if (opt->state & State_Horizontal) {
+			r2.setWidth(r.width() + 1);
+			r2.setX(r.x() - 1);
+		} else {
+			r2.setHeight(r.height() + 1);
+			r2.setY(r.y() - 1);
+		}
+
+		// Highlight on mouse over
+		QStyleOption optCopy(*opt);
+	    optCopy.state = (opt->state & ~State_Sunken) | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
+	    drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
+
+		if (opt->state & State_Horizontal && r.width() < 31)
+			break;
+		if (!(opt->state & State_Horizontal) && r.height() < 31)
+			break;
+
+		// Scrollbar diagonal handle
+		p->setPen(cdata->shades[5]);
+		if (opt->state & State_Horizontal) {
+			x1 = (r.left() + r.right()) / 2 - 8;
+			y1 = ((r.top() + r.bottom()) - 6) / 2;
+			p->drawLine(x1 + 5, y1, x1, y1 + 5);
+			p->drawLine(x1 + 5 + 5, y1,	x1 + 5, y1 + 5);
+			p->drawLine(x1 + 5 + 5*2, y1, x1 + 5*2, y1 + 5);
+		} else {
+			x1 = ((r.left() + r.right()) - 6) / 2;
+			y1 = (r.top() + r.bottom()) / 2 - 8;
+			p->drawLine(x1 + 5, y1,	x1, y1 + 5);
+			p->drawLine(x1 + 5, y1 + 5,	x1, y1 + 5 + 5);
+			p->drawLine(x1 + 5, y1 + 5*2, x1, y1 + 5 + 5*2);
+		}
+
+		p->setPen(Qt::white);
+		if (opt->state & State_Horizontal) {
+			x1 = (r.left() + r.right()) / 2 - 8;
+			y1 = ((r.top() + r.bottom()) - 6) / 2;
+			p->drawLine(x1 + 5, y1+1, x1 + 1, y1 + 5);
+			p->drawLine(x1 + 5 + 5, y1 + 1,	x1 + 1 + 5, y1 + 5);
+			p->drawLine(x1 + 5 + 5*2, y1 + 1, x1 + 1 + 5*2, y1 + 5);
+		} else {
+			x1 = ((r.left() + r.right()) - 6) / 2;
+			y1 = (r.top() + r.bottom()) / 2 - 8;
+			p->drawLine(x1 + 5, y1 + 1,	x1 + 1, y1 + 5);
+			p->drawLine(x1 + 5, y1 + 1 + 5,	x1 + 1, y1 + 5 + 5);
+			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
+		}
 		
 		break;
 	}
