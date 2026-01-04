@@ -15,19 +15,23 @@ public:
 	void polish(QWidget *widget);
 
 	void drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
-					   QPainter *p, const QWidget *widget) const override;
+					   QPainter *p, const QWidget *widget = nullptr) const override;
 
 	void drawControl(ControlElement control, const QStyleOption *opt,
-					 QPainter *p, const QWidget *widget) const override;
+					 QPainter *p, const QWidget *widget = nullptr) const override;
 
 	QRect subElementRect(SubElement element, const QStyleOption *opt,
-						 const QWidget *widget) const override;
+						 const QWidget *widget = nullptr) const override;
+
+	void drawComplexControl(ComplexControl control, const QStyleOptionComplex *opt,
+							QPainter *p, const QWidget *widget = nullptr) const override;
 
 	int pixelMetric(PixelMetric metric, const QStyleOption *opt = nullptr,
 					const QWidget *widget = nullptr) const override;
 
-	int styleHint(StyleHint sh, const QStyleOption *opt, const QWidget *widget,
-				  QStyleHintReturn *hret) const override;
+	int styleHint(StyleHint sh, const QStyleOption *opt = nullptr,
+				  const QWidget *widget = nullptr,
+				  QStyleHintReturn *hret = nullptr) const override;
 
 private:
 	struct BluecurveColorData {

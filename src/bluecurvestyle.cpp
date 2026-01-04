@@ -992,7 +992,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}*/
 
 	case CE_TabBarTabShape: {
-		const QTabBar* tb = static_cast<const QTabBar*>(widget);
+		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
 		bool below = false;
 		QRect tr(r);
 		QRect fr(r);
@@ -1000,7 +1000,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		tr.adjust(0, 0,  0, -1); // NB: adjust replaces addCoords
 		fr.adjust(1, 2, -2, -2);
 
-		if ( tb->shape() == QTabBar::RoundedSouth || tb->shape() == QTabBar::TriangularSouth) {
+		if ( tabOpt->shape == QTabBar::RoundedSouth || tabOpt->shape == QTabBar::TriangularSouth) {
 			tr = r; tr.adjust(0, 1, 0, 0);
 			fr = r; fr.adjust(2, 2,-2, -2);
 			below=true;
@@ -1274,12 +1274,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_ProgressBarContents: {
-		const QProgressBar *progressbar = static_cast<const QProgressBar *>(widget);
+		const QStyleOptionProgressBar *progressbarOpt = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
 	    bool reverse = QGuiApplication::isRightToLeft();
 
 		QRect pr;
 
-		if ((progressbar->minimum() == 0) && (progressbar->maximum() == 0)) {
+		if ((progressbarOpt->minimum == 0) && (progressbarOpt->maximum == 0)) {
 			int w, remains;
 
 			// draw busy indicator
@@ -1290,16 +1290,16 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			remains = r.width() - w;
 			remains = std::max(remains, 1);
 
-			int x = progressbar->value() % (remains * 2);
+			int x = progressbarOpt->progress % (remains * 2);
 			if (x > remains)
 				x = 2 * remains - x;
 
 			x = reverse ? r.right() - x - w : x + r.left();
 			pr.setRect (x, r.top(), w, r.height());
 		} else {
-			int pos = progressbar->value();
-			int total = (progressbar->maximum() - progressbar->minimum()) ?
-				(progressbar->maximum() - progressbar->minimum()) : 1;
+			int pos = progressbarOpt->progress;
+			int total = (progressbarOpt->maximum - progressbarOpt->minimum) ?
+				(progressbarOpt->maximum - progressbarOpt->minimum) : 1;
 			int w = (int)(((double)pos*r.width())/total);
 
 			if (reverse)
@@ -1313,14 +1313,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_CheckBoxLabel: {
-		const QCheckBox *checkbox = static_cast<const QCheckBox *>(widget);
 		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
 
 		if (opt->state & State_MouseOver) {
-			QRegion r(checkbox->rect());
-			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), checkbox->rect());
+			QRegion r(opt->rect);
+			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), opt->rect);
 			p->setClipRegion(r);
-			p->fillRect(checkbox->rect(), opt->palette.brush(QPalette::Midlight));
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
 			p->setClipping(false);
 		}
 
@@ -1332,14 +1331,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_RadioButtonLabel: {
-		const QRadioButton *radiobutton = static_cast<const QRadioButton *>(widget);
 		const QStyleOptionButton *radioOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
 
 		if (opt->state & State_MouseOver) {
-			QRegion r(radiobutton->rect());
-			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), radiobutton->rect());
+			QRegion r(opt->rect);
+			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), opt->rect);
 			p->setClipRegion(r);
-			p->fillRect(radiobutton->rect(), opt->palette.brush(QPalette::Midlight));
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
 			p->setClipping(false);
 		}
 
@@ -1501,13 +1499,14 @@ QRect
 BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 							   const QWidget *widget) const
 {
-	QRect rect, wrect(widget->rect());
+	QRect rect, wrect(opt->rect);
 
 	switch (element) {
 	case SE_PushButtonFocusRect: {
-		const QPushButton *button = static_cast<const QPushButton *>(widget);
+		const QStyleOptionButton *buttonOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
 		int dbw1 = 0, dbw2 = 0;
-		if (button->isDefault() || button->autoDefault()) {
+		if ((buttonOpt->features & QStyleOptionButton::DefaultButton) ||
+			(buttonOpt->features & QStyleOptionButton::AutoDefaultButton)) {
 			dbw1 = pixelMetric(PM_ButtonDefaultIndicator, opt, widget);
 			dbw2 = dbw1 * 2;
 		}
@@ -1521,16 +1520,16 @@ BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 
 	case SE_CheckBoxIndicator: {
 		int h = pixelMetric( PM_IndicatorHeight );
-		rect.setRect(( widget->rect().height() - h ) / 2,
-					 ( widget->rect().height() - h ) / 2,
+		rect.setRect(( opt->rect.height() - h ) / 2,
+					 ( opt->rect.height() - h ) / 2,
 					 pixelMetric( PM_IndicatorWidth ), h );
 		break;
 	}
 
 	case SE_RadioButtonIndicator: {
 		int h = pixelMetric( PM_ExclusiveIndicatorHeight );
-		rect.setRect( ( widget->rect().height() - h ) / 2,
-					  ( widget->rect().height() - h ) / 2,
+		rect.setRect( ( opt->rect.height() - h ) / 2,
+					  ( opt->rect.height() - h ) / 2,
 					  pixelMetric( PM_ExclusiveIndicatorWidth ), h );
 		break;
 	}
@@ -1542,6 +1541,96 @@ BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 	}
 
 	return rect;
+}
+
+void
+BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionComplex *opt,
+								   QPainter *p, const QWidget *widget) const
+{
+	const BluecurveColorData *cdata = lookupData(opt->palette);
+	
+	switch (control) {
+	case CC_ComboBox: {
+		const QStyleOptionComboBox *comboboxOpt = qstyleoption_cast<const QStyleOptionComboBox *>(opt);
+		QRect frame, arrow, field;
+
+		frame = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxFrame, widget), opt->rect);
+		arrow = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxArrow, widget), opt->rect);
+		field = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget), opt->rect);
+
+		if ((opt->subControls & SC_ComboBoxFrame) && frame.isValid()) {
+			QStyleOption frameOpt;
+			frameOpt.state = opt->state | State_Raised;
+			frameOpt.rect = frame;
+			frameOpt.palette = opt->palette;
+			if (opt->state & State_MouseOver)
+				drawLightBevel(p, &frameOpt, &opt->palette.brush(QPalette::Midlight), true);
+			else
+				drawLightBevel(p, &frameOpt, &opt->palette.brush(QPalette::Button), true);
+		}
+
+		if ((opt->subControls & SC_ComboBoxArrow) && arrow.isValid()) {
+			QStyleOption arrowOpt;
+			arrowOpt.state = opt->state & ~State_MouseOver;
+			arrowOpt.rect = arrow;
+			arrowOpt.palette = opt->palette;
+			
+			drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p);
+			p->setPen(cdata->shades[3]);
+			p->drawLine((arrow.left()+arrow.right())/2-2, 
+						(arrow.top()+arrow.bottom())/2+5, 
+						(arrow.left()+arrow.right())/2+2,
+						(arrow.top()+arrow.bottom())/2+5);
+			p->drawLine((arrow.left()+arrow.right())/2-2,
+						(arrow.top()+arrow.bottom())/2+6,
+						(arrow.left()+arrow.right())/2+2,
+						(arrow.top()+arrow.bottom())/2+6);
+		}
+
+		if ((opt->subControls & SC_ComboBoxEditField) && field.isValid()) {
+			p->setPen(cdata->shades[4]);
+			if (comboboxOpt->editable) {
+				field.adjust(-1, -1, 1, 1);
+				p->drawLine(field.right(), field.top() - 1,
+							field.right(), field.bottom() + 1);
+				p->setPen(opt->palette.light().color());
+				p->drawLine(field.right() + 1, field.top(),
+							field.right() + 1, field.bottom() );
+			} else {
+				p->drawLine(field.right() + 1, field.top() - 2,
+							field.right() + 1, field.bottom() + 2);
+				p->setPen(opt->palette.light().color());
+				p->drawLine(field.right() + 2, field.top() - 1,
+							field.right() + 2, field.bottom() + 1);
+			}
+
+			if (opt->state & State_HasFocus) {
+				if (! comboboxOpt->editable) {
+					QRect fr = visualRect(opt->direction, subElementRect(SE_ComboBoxFocusRect, opt, widget), opt->rect);
+					fr.setRight(fr.right() - 3);
+					QStyleOption focusRectOpt;
+					focusRectOpt.state = opt->state | State_FocusAtBorder;
+					focusRectOpt.rect = fr;
+					focusRectOpt.palette = opt->palette;
+					drawPrimitive(PE_FrameFocusRect, opt, p);
+				}
+			}
+
+			if (opt->state & State_Enabled)
+				p->setPen(opt->palette.buttonText().color());
+			else
+				p->setPen(opt->palette.mid().color());
+			
+		}
+		
+		break;
+	}
+		
+	default: {
+		QCommonStyle::drawComplexControl(control, opt, p, widget);
+		break;
+	}
+	}
 }
 
 int
