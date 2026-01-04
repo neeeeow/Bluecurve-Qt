@@ -1497,6 +1497,53 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	
 }
 
+QRect
+BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
+							   const QWidget *widget) const
+{
+	QRect rect, wrect(widget->rect());
+
+	switch (element) {
+	case SE_PushButtonFocusRect: {
+		const QPushButton *button = static_cast<const QPushButton *>(widget);
+		int dbw1 = 0, dbw2 = 0;
+		if (button->isDefault() || button->autoDefault()) {
+			dbw1 = pixelMetric(PM_ButtonDefaultIndicator, opt, widget);
+			dbw2 = dbw1 * 2;
+		}
+
+		rect.setRect(wrect.x()	  + 3 + dbw1,
+					 wrect.y()	  + 3 + dbw1,
+					 wrect.width()  - 6 - dbw2,
+					 wrect.height() - 6 - dbw2);
+		break;
+	}
+
+	case SE_CheckBoxIndicator: {
+		int h = pixelMetric( PM_IndicatorHeight );
+		rect.setRect(( widget->rect().height() - h ) / 2,
+					 ( widget->rect().height() - h ) / 2,
+					 pixelMetric( PM_IndicatorWidth ), h );
+		break;
+	}
+
+	case SE_RadioButtonIndicator: {
+		int h = pixelMetric( PM_ExclusiveIndicatorHeight );
+		rect.setRect( ( widget->rect().height() - h ) / 2,
+					  ( widget->rect().height() - h ) / 2,
+					  pixelMetric( PM_ExclusiveIndicatorWidth ), h );
+		break;
+	}
+		
+	default: {
+		rect = QCommonStyle::subElementRect(element, opt, widget);
+		break;
+	}
+	}
+
+	return rect;
+}
+
 int
 BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 							const QWidget *widget) const
