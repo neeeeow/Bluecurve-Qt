@@ -753,10 +753,10 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;		
 	}
 
-		/*case PE_PanelLineEdit: {  // TODO: fix this
-		drawTextRect(p, r, palette, flags);
+	case PE_PanelLineEdit: {
+		drawTextRect(p, opt);
 		break;
-		}*/		
+	}		
 
 	case PE_FrameTabWidget: {
 		p->setPen(cdata->shades[6]);

@@ -64,7 +64,7 @@ private:
 	void getShade (const QPalette &palette, int shadenr, QColor &res) const;
 
 	void drawTextRect(QPainter *p, const QStyleOption *opt,
-					  const QBrush *fill) const;
+					  const QBrush *fill = 0) const;
 
 	void drawLightBevel(QPainter *p, const QStyleOption *opt,
 						const QBrush *fill = 0, bool dark = false) const;	
