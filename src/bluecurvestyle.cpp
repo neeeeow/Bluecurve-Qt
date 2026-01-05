@@ -1625,6 +1625,220 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		
 		break;
 	}
+
+	case CC_SpinBox: {
+		const QStyleOptionSpinBox *spinboxOpt = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
+		QRect frame, up, down;
+
+		frame = subControlRect(CC_SpinBox, opt, SC_SpinBoxFrame, widget);
+		up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
+		down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
+
+		if ((opt->subControls & SC_SpinBoxFrame) && frame.isValid()) {
+			QStyleOption textOpt;
+			textOpt.state = opt->state | State_Sunken;
+			textOpt.rect = frame;
+			textOpt.palette = opt->palette;
+			drawTextRect(p, &textOpt, &opt->palette.brush(QPalette::Base));
+		}
+
+		p->setPen(cdata->shades[5]);
+		p->drawLine(up.topLeft(), down.bottomLeft());
+		p->drawLine(up.left(), up.bottom()+1, up.right(), up.bottom()+1);
+
+		if ((opt->subControls & SC_SpinBoxUp) && up.isValid()) {
+			PrimitiveElement pe = PE_IndicatorSpinUp;
+
+			if (spinboxOpt->buttonSymbols == QAbstractSpinBox::PlusMinus)
+				pe = PE_IndicatorSpinPlus;
+
+			up.adjust(1, 0, 0, 0);
+			p->fillRect(up, opt->palette.brush(QPalette::Button));
+
+			if (opt->activeSubControls == SC_SpinBoxUp)
+				p->setPen(cdata->shades[2]);
+			else
+				p->setPen(opt->palette.light().color());
+
+			p->drawLine(up.left(), up.top(), up.right(), up.top());
+			p->drawLine(up.left(), up.top(), up.left(), up.bottom());
+
+			if (opt->activeSubControls == SC_SpinBoxUp)
+				p->setPen(opt->palette.light().color());
+			else
+				p->setPen(cdata->shades[2]);
+
+			p->drawLine(up.right(), up.top()+1, up.right(), up.bottom());
+			p->drawLine(up.left()+1, up.bottom(), up.right(), up.bottom());
+
+			up.adjust(1, 0, 0, 0);
+
+			QStyleOption indicatorOpt;
+			indicatorOpt.state =  opt->state | ((opt->activeSubControls == SC_SpinBoxUp) ? State_On | State_Sunken : State_Raised);
+			indicatorOpt.rect = up;
+			indicatorOpt.palette = opt->palette;
+			drawPrimitive(pe, opt, p);
+		}
+
+		if ((opt->subControls & SC_SpinBoxDown) && down.isValid()) {
+			PrimitiveElement pe = PE_IndicatorSpinDown;
+
+			if (spinboxOpt->buttonSymbols == QAbstractSpinBox::PlusMinus)
+				pe = PE_IndicatorSpinMinus;
+
+			down.adjust(1, 0, 0, 0);
+			p->fillRect(down, opt->palette.brush(QPalette::Button));
+
+			if (opt->activeSubControls == SC_SpinBoxDown)
+				p->setPen(cdata->shades[2]);
+			else
+				p->setPen(opt->palette.light().color());
+
+			p->drawLine(down.left(), down.top(), down.right(), down.top());
+			p->drawLine(down.left(), down.top(), down.left(), down.bottom());
+
+			if (opt->activeSubControls == SC_SpinBoxDown)
+				p->setPen(opt->palette.light().color());
+			else
+				p->setPen(cdata->shades[2]);
+
+			p->drawLine(down.right(), down.top()+1,
+						down.right(), down.bottom());
+			p->drawLine(down.left()+1, down.bottom(),
+						down.right(), down.bottom());
+
+			down.adjust(1, 0, 0, 0);
+
+			QStyleOption indicatorOpt;
+			indicatorOpt.state =  opt->state | ((opt->activeSubControls == SC_SpinBoxDown) ? State_On | State_Sunken : State_Raised);
+			indicatorOpt.rect = down;
+			indicatorOpt.palette = opt->palette;
+			drawPrimitive(pe, opt, p);
+		}
+		
+		break;
+	}
+
+	case CC_Slider: {
+		const QStyleOptionSlider *sliderOpt = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		QRect groove = subControlRect(CC_Slider, opt, SC_SliderGroove, widget);
+		QRect handle = subControlRect(CC_Slider, opt, SC_SliderHandle, widget);
+
+		if ((opt->subControls & SC_SliderGroove) && groove.isValid()) {
+			if (opt->state & State_HasFocus) {
+				QStyleOption focusOpt;
+				focusOpt.state = QStyle::State();
+				focusOpt.rect = groove;
+				focusOpt.palette = opt->palette;
+				drawPrimitive(PE_FrameFocusRect, &focusOpt, p);
+			}
+
+			if (sliderOpt->orientation == Qt::Horizontal) {
+				int dh = (groove.height() - 5) / 2;
+				groove.adjust(0, dh, 0, -dh);
+				handle.adjust(0, 1, 0, -1);
+			} else {
+				int dw = (groove.width() - 5) / 2;
+				groove.adjust(dw, 0, -dw, 0);
+				handle.adjust(1, 0, -1, 0);
+			}
+
+			p->setPen(cdata->shades[5]);
+			p->setBrush(opt->palette.mid().color());
+			p->drawRect(groove.adjusted(0,0,-1,-1));
+			p->setPen(cdata->shades[4]);
+			p->drawLine(groove.left()+1, groove.top()+1,
+						groove.left()+1, groove.bottom()-1);
+			p->drawLine(groove.left()+1, groove.top()+1,
+						groove.right()-1, groove.top()+1);
+		}
+
+		if ((opt->subControls & SC_SliderHandle) && handle.isValid()) {
+			p->setPen(cdata->shades[6]);
+			p->drawLine(handle.x() + 2, handle.y(),
+						handle.right() - 2, handle.y());
+			p->drawLine(handle.x(), handle.y() + 2,
+						handle.x(), handle.bottom() - 2);
+			p->drawLine(handle.right(), handle.y() + 2,
+						handle.right(), handle.bottom() - 2);
+			p->drawLine(handle.x() + 2, handle.bottom(),
+						handle.right() - 2, handle.bottom());
+			p->drawPoint(handle.x() + 1, handle.y() + 1);
+			p->drawPoint(handle.right() - 1, handle.y() + 1);
+			p->drawPoint(handle.right() - 1, handle.bottom() - 1);
+			p->drawPoint (handle.x() + 1, handle.bottom() - 1);
+			  
+
+			p->setPen(cdata->shades[2]);
+			p->drawLine(handle.x() + 2, handle.bottom() - 1,
+						handle.right() - 2, handle.bottom() - 1);
+			p->drawLine(handle.right() - 1, handle.top() + 2,
+						handle.right() - 1, handle.bottom() - 2);
+			p->drawPoint (handle.x() + 1, handle.y());
+			p->drawPoint (handle.right() - 1, handle.y());
+			p->drawPoint (handle.x(), handle.y() + 1);
+			p->drawPoint (handle.right(), handle.y() + 1);
+			p->drawPoint (handle.x(), handle.bottom() - 1);
+			p->drawPoint (handle.right(), handle.bottom() - 1);
+			p->drawPoint (handle.x() + 1, handle.bottom() );
+			p->drawPoint (handle.right() - 1, handle.bottom());
+			  
+			p->setPen(Qt::white);
+			p->drawLine (handle.x() + 2, handle.y() + 1,
+						 handle.right() - 2, handle.y() + 1);
+			p->drawLine (handle.x() + 1, handle.y() + 2,
+						 handle.x() + 1, handle.bottom() - 2);
+
+			p->setBrush(opt->palette.button().color());
+			QRect fillr (handle);
+			fillr.adjust(2, 2, -2, -2);
+			p->fillRect (fillr, opt->palette.brush(QPalette::Button));
+
+			if (sliderOpt->orientation == Qt::Horizontal) {
+				int x1 = handle.x() + handle.width() / 2 - 8;
+				int y1 = handle.y() + (handle.height() - 6) / 2;
+				p->setPen(cdata->shades[5]);
+				p->drawLine(x1 + 5, y1,
+							x1, y1 + 5);
+				p->drawLine(x1 + 5 + 5, y1,
+							x1 + 5, y1 + 5);
+				p->drawLine(x1 + 5 + 5*2, y1,
+							x1 + 5*2, y1 + 5);
+				
+				p->setPen(Qt::white);
+				p->drawLine(x1 + 5, y1 + 1,
+							x1 + 1, y1 + 5);
+				p->drawLine(x1 + 5 + 5, y1 + 2,
+							x1 + 5 + 1, y1 + 5);
+				p->drawLine(x1 + 5 + 5*2, y1 + 1,
+							x1 + 5*2 + 1, y1 + 5);
+			} else {
+				int x1 = handle.x() + (handle.width() - 6) / 2;
+				int y1 = handle.y() + handle.height() / 2 - 8;
+				p->setPen(cdata->shades[5]);
+				p->drawLine(x1 + 5, y1,
+							x1, y1 + 5);
+				p->drawLine(x1 + 5, y1 + 5,
+							x1, y1 + 5 + 5);
+				p->drawLine(x1 + 5, y1 + 5*2,
+							x1, y1 + 5 + 5*2);
+				p->setPen(Qt::white);
+				p->drawLine(x1 + 5, y1 + 1,
+							x1 + 1, y1 + 5);
+				p->drawLine(x1 + 5, y1 + 5 + 1,
+							x1 + 1, y1 + 5 + 5);
+				p->drawLine(x1 + 5, y1 + 5*2 + 1,
+							x1 + 1, y1 + 5 + 5*2);
+			}
+		}
+
+		if (opt->subControls & SC_SliderTickmarks) {
+			QStyleOptionComplex optCopy(*opt);
+			optCopy.subControls = SC_SliderTickmarks;
+			QCommonStyle::drawComplexControl(control, &optCopy, p, widget);
+		}
+		break;
+	}
 		
 	default: {
 		QCommonStyle::drawComplexControl(control, opt, p, widget);
