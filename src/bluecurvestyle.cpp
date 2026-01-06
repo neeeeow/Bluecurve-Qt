@@ -1847,6 +1847,81 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 	}
 }
 
+QRect
+BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex *opt,
+							   SubControl sc, const QWidget *widget) const
+{
+	QRect ret;
+	
+	switch (control) {
+	case CC_SpinBox: {
+		int fw = pixelMetric( PM_SpinBoxFrameWidth, opt, widget);
+		QSize bs;
+		bs.setHeight( widget->height()/2 - fw );
+		if ( bs.height() < 8 )
+			bs.setHeight( 8 );
+		bs.setWidth( bs.height() * 8 / 6 ); 
+		//bs = bs.expandedTo( QApplication::globalStrut() ); no qt6 equivalent 
+		int y = fw;
+		int x, lx, rx;
+		x = widget->width() - y - bs.width() + 1;
+		lx = fw;
+		rx = x - fw;
+		switch ( sc ) {
+		case SC_SpinBoxUp: {
+			ret.setRect(x, y-1, bs.width(), bs.height()+1);
+			break;
+		}
+		case SC_SpinBoxDown: {
+			ret.setRect(x, y + bs.height()+1, bs.width(), bs.height()+1);
+			break;
+		}
+		case SC_SpinBoxEditField: {
+			ret.setRect(lx, fw, rx, widget->height() - 2*fw);
+			break;
+		}
+		case SC_SpinBoxFrame: {
+			ret = widget->rect();
+		}
+		default: {
+			break;
+		}
+		}
+		
+		break;
+	}
+
+	case CC_ComboBox: {
+		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
+		switch (sc) {
+		case SC_ComboBoxFrame: {
+			break;
+		}
+		case SC_ComboBoxArrow: {
+			ret.setTop(ret.top() - 2);
+			ret.setLeft(ret.left() - 1);
+			break;
+		}
+		case SC_ComboBoxEditField: {
+			ret.setRight(ret.right() - 2);
+			break;
+		}
+		default: {
+			break;
+		}
+		}
+		break;
+	}
+
+	default: {
+		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
+		break;
+	}
+	}
+
+	return ret;
+}
+
 int
 BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 							const QWidget *widget) const
@@ -1982,6 +2057,96 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	default:
 		ret = QCommonStyle::pixelMetric(metric, opt, widget);
 		break;
+	}
+
+	return ret;
+}
+
+QSize
+BluecurveStyle::sizeFromContents(ContentsType contents,
+								 const QStyleOption *opt,
+								 const QSize &contentsSize,
+								 const QWidget *widget) const
+{
+	QSize ret = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget );
+
+	switch (contents) {
+	case CT_PushButton: {
+		const QStyleOptionButton *buttonOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
+		int w = ret.width(), h = ret.height();
+
+		// only expand the button if we are displaying text...
+		if (buttonOpt->icon.isNull()) {
+			if ( w < 85 )
+				w = 85;
+			if ( h < 30 )
+				h = 30;
+		}
+		
+		ret = QSize( w, h );
+		break;
+	}
+
+	case CT_MenuItem: {
+		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+		int maxpmw = miOpt->maxIconWidth;
+		int w = contentsSize.width(), h = contentsSize.height();
+
+		if (miOpt->menuItemType == QStyleOptionMenuItem::Separator) {
+			w = 10;
+			h = 12;
+		} else {
+			// check is at least 16x16
+			if (h < 16) {
+				h = 16;
+			}
+
+			if (! miOpt->icon.isNull()) {
+				h = std::max(h, pixelMetric(PM_SmallIconSize) + 6);
+			} else if (! miOpt->text.isNull()) {
+				h = std::max(h, opt->fontMetrics.height() + 8);
+			}
+		}
+
+		// check is at least 16x16
+		maxpmw = std::max(maxpmw, 16);
+		w += maxpmw + 16;
+
+		if (!miOpt->text.isNull() && miOpt->text.indexOf('\t') >= 0)
+			w += 8;
+
+		ret = QSize(w, h);
+		break;
+	}
+
+	case CT_ToolButton: {
+		int w = ret.width(), h = ret.height();
+		h = (h < 32 ? 32 : h);
+		w = (w < 32 ? 32 : w);
+		ret = QSize(w, h);
+		break;
+	}
+
+	case CT_ComboBox: {
+		int w = ret.width(), h = ret.height();
+		if (h < 27)
+			h = 27;
+		ret = QSize(w, h);
+		break;
+	}
+
+	case CT_SpinBox: {
+		int w = ret.width(), h = ret.height();
+		if (h < 25)
+			h = 25;
+
+		ret = QSize(w, h);
+		break; 
+	}
+		
+	default: {
+		break;
+	}
 	}
 
 	return ret;

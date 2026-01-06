@@ -26,8 +26,15 @@ public:
 	void drawComplexControl(ComplexControl control, const QStyleOptionComplex *opt,
 							QPainter *p, const QWidget *widget = nullptr) const override;
 
+	QRect subControlRect(ComplexControl control, const QStyleOptionComplex *opt,
+						 SubControl sc, const QWidget *widget = nullptr) const override;
+
 	int pixelMetric(PixelMetric metric, const QStyleOption *opt = nullptr,
 					const QWidget *widget = nullptr) const override;
+
+	QSize sizeFromContents(ContentsType contents, const QStyleOption *opt,
+						   const QSize &contentsSize,
+						   const QWidget *widget = nullptr) const override;
 
 	int styleHint(StyleHint sh, const QStyleOption *opt = nullptr,
 				  const QWidget *widget = nullptr,
