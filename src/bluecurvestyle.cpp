@@ -1912,6 +1912,14 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
+	case PM_MenuButtonIndicator: {
+		if (! widget)
+			ret = 12;
+		else
+			ret = std::max(12, (widget->height() - 4) / 3);
+		break;
+	}
+
 	case PM_ButtonShiftHorizontal:
 	case PM_ButtonShiftVertical: {
 		ret = 0;
@@ -1945,29 +1953,28 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	}
 
 	case PM_SliderControlThickness: {
-		/* Taken from QWindowsStyle */
-        if (const QStyleOptionSlider *sl = qstyleoption_cast<const QStyleOptionSlider *>(opt)) {
-            int space = (sl->orientation == Qt::Horizontal) ? sl->rect.height() : sl->rect.width();
-            int ticks = sl->tickPosition;
-            int n = 0;
-            if (ticks & QSlider::TicksAbove)
-                ++n;
-            if (ticks & QSlider::TicksBelow)
-                ++n;
-            if (!n) {
-                ret = space;
-                break;
-            }
+		/* Taken from Qt3 QMotifStyle */
+	    const QStyleOptionSlider *sl = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!sl)
+			break;
+		
+	    int space = (sl->orientation == Qt::Horizontal) ? sl->rect.height() : sl->rect.width();
+	    int ticks = sl->tickPosition;
+	    int n = 0;
+	    if ( ticks & QSlider::TicksAbove ) n++;
+	    if ( ticks & QSlider::TicksBelow ) n++;
+	    if ( !n ) {
+			ret = space;
+			break;
+	    }
 
-            int thick = 6;        // Magic constant to get 5 + 16 + 5
-            if (ticks != QSlider::TicksBothSides && ticks != QSlider::NoTicks)
-                thick += proxy()->pixelMetric(PM_SliderLength, sl, widget) / 4;
+	    int thick = 6;	// Magic constant to get 5 + 16 + 5
 
-            space -= thick;
-            if (space > 0)
-                thick += (space * 2) / (n + 2);
-            ret = thick;
-        }
+	    space -= thick;
+	    //### the two sides may be unequal in size
+	    if ( space > 0 )
+			thick += (space * 2) / (n + 2);
+	    ret = thick;
 		break;
 	}
 		
