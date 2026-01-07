@@ -1174,14 +1174,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawPixmap(pmr.topLeft(), pixmap);
 		} else if (miOpt->menuHasCheckableItems && miOpt->checked) {
 			QStyleOption checkOpt;
-			checkOpt.state = opt->state & (State_Enabled|State_Selected);
+			checkOpt.state = (opt->state & (State_Enabled|State_Selected)) | State_On;
 			checkOpt.rect = cr;
 			checkOpt.palette = opt->palette;
 			drawPrimitive(PE_IndicatorMenuCheckMark, &checkOpt, p, widget);
 		}
 		QColor textcolor;
 		QColor embosscolor;
-		if (opt->state & QStyle::State_Selected) {
+		if (opt->state & State_Selected) {
 			if (! (opt->state & State_Enabled)) {
 				textcolor = opt->palette.text().color();
 				embosscolor = opt->palette.light().color();
@@ -1219,17 +1219,17 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			}
 
 			int alignFlag = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
-			alignFlag |= ( reverse ? Qt::AlignLeft : Qt::AlignRight );
+			alignFlag |= ( reverse ? Qt::AlignRight : Qt::AlignLeft );
 
 			if (! (opt->state & State_Enabled)) {
 				p->setPen(embosscolor);
 				ir.translate(1, 1);
-				p->drawText(ir, alignFlag, text);
+				p->drawText(ir, alignFlag, text.first(t));
 				ir.translate(-1, -1);
 				p->setPen(textcolor);
 			}
 
-			p->drawText(ir, alignFlag, text);
+			p->drawText(ir, alignFlag, text.first(t));
 		} // mi->pixmap() is deprecated for a long time now, so ignore it
 
 		if (miOpt->menuItemType == QStyleOptionMenuItem::SubMenu) {
