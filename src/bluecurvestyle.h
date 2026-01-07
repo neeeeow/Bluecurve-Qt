@@ -6,11 +6,10 @@
 class BluecurveStyle : public QCommonStyle
 {
 	Q_OBJECT
-	QStyle *basestyle;
 
 public:
-	BluecurveStyle();
-    virtual ~BluecurveStyle();
+	BluecurveStyle() = default;
+    ~BluecurveStyle() override = default;
 
 	void polish(QWidget *widget);
 

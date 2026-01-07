@@ -340,18 +340,6 @@ BluecurveStyle::BluecurveColorData::~BluecurveColorData()
 	}
 }
 
-BluecurveStyle::BluecurveStyle() : QCommonStyle(), m_dataCache ()
-{	
-	basestyle = QStyleFactory::create("Windows"); // Original theme used MotifPlus, but this is no longer available, so we use Windows.
-	if (!basestyle)
-		qFatal( "BluecurveStyle: couldn't find a base style!" );
-}
-
-BluecurveStyle::~BluecurveStyle()
-{
-	delete basestyle;
-}
-
 void
 BluecurveStyle::polish(QWidget *widget)
 {
