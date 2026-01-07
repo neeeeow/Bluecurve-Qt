@@ -1912,26 +1912,21 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 							const QWidget *widget) const
 {
 	int ret;
-	
+
 	switch (metric) {
 	case PM_ButtonMargin: {
 		ret = 10;
+		break;
+	}
+		
+	case PM_ButtonDefaultIndicator: {
+		ret = 0;
 		break;
 	}
 
 	case PM_ButtonShiftHorizontal:
 	case PM_ButtonShiftVertical: {
 		ret = 0;
-		break;
-	}
-
-	case PM_ButtonDefaultIndicator: {
-		ret = 0;
-		break;
-	}
-
-	case PM_ButtonIconSize: {
-		ret = 20;
 		break;
 	}
 
@@ -1946,23 +1941,82 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
-	case PM_IndicatorWidth:
-	case PM_IndicatorHeight:
-	case PM_ExclusiveIndicatorWidth:
-	case PM_ExclusiveIndicatorHeight: {
-		ret = 13;
+	case PM_MaximumDragDistance: {
+		ret = -1;
 		break;
 	}
 
-	case PM_MenuVMargin: {
+	case PM_ScrollBarExtent: {
+		ret = 15;
+		break;
+	}
+
+	case PM_ScrollBarSliderMin: {
+		ret=31;
+		break;
+	}
+
+	case PM_SliderControlThickness: {
+		/* Taken from QWindowsStyle */
+        if (const QStyleOptionSlider *sl = qstyleoption_cast<const QStyleOptionSlider *>(opt)) {
+            int space = (sl->orientation == Qt::Horizontal) ? sl->rect.height() : sl->rect.width();
+            int ticks = sl->tickPosition;
+            int n = 0;
+            if (ticks & QSlider::TicksAbove)
+                ++n;
+            if (ticks & QSlider::TicksBelow)
+                ++n;
+            if (!n) {
+                ret = space;
+                break;
+            }
+
+            int thick = 6;        // Magic constant to get 5 + 16 + 5
+            if (ticks != QSlider::TicksBothSides && ticks != QSlider::NoTicks)
+                thick += proxy()->pixelMetric(PM_SliderLength, sl, widget) / 4;
+
+            space -= thick;
+            if (space > 0)
+                thick += (space * 2) / (n + 2);
+            ret = thick;
+        }
+		break;
+	}
+		
+	case PM_SliderLength: {
+		ret=31;
+		if (widget->inherits("QSlider")) {
+			const QSlider *slider = static_cast<const QSlider*>(widget);
+			if (slider->orientation() == Qt::Horizontal) {
+				if (widget->width()<ret)
+					ret = widget->width();
+			} else {
+				if (widget->height()<ret)
+					ret = widget->height();
+			}
+		}
+		break;
+	}
+
+	case PM_DockWidgetSeparatorExtent: {
+		ret = 4;
+		break;
+	}
+
+	case PM_DockWidgetHandleExtent: {
+		ret = 10;
+		break;
+	}
+
+	case PM_MenuBarPanelWidth: {
 		ret = 1;
 		break;
 	}
 
-		/*case PM_TabBarTabOverlap: { seems to have no effect in Qt6
+	case PM_TabBarTabOverlap: {
 		ret = 1;
 		break;
-		}*/
+	}
 
 	case PM_TabBarTabHSpace: {
 		ret = 10;
@@ -1979,28 +2033,8 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
-	case PM_ScrollBarExtent: {
-		ret = 15;
-		break;
-	}
-
-	case PM_MenuBarPanelWidth: {
-		ret = 1;
-		break;
-	}
-
 	case PM_ProgressBarChunkWidth: {
 		ret = 2;
-		break;
-	}
-
-	case PM_DockWidgetSeparatorExtent: {
-		ret = 4;
-		break;
-	}
-
-	case PM_DockWidgetHandleExtent: {
-		ret = 10;
 		break;
 	}
 
@@ -2009,39 +2043,29 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
-	case PM_ScrollBarSliderMin: {
-		ret=31;
+	case PM_IndicatorWidth:
+	case PM_IndicatorHeight:
+	case PM_ExclusiveIndicatorWidth:
+	case PM_ExclusiveIndicatorHeight: {
+		ret = 13;
 		break;
 	}
 
-	case PM_SliderControlThickness: {
-		ret = basestyle->pixelMetric( metric, opt, widget );
+	case PM_MenuVMargin: {
+		ret = 1;
 		break;
 	}
 
-	case PM_SliderLength: {
-		ret=31;
-		if (widget->inherits("QSlider")) {
-			const QSlider *slider = static_cast<const QSlider*>(widget);
-			if (slider->orientation() == Qt::Horizontal) {
-				if (widget->width()<ret)
-					ret = widget->width();
-			} else {
-				if (widget->height()<ret)
-					ret = widget->height();
-			}
-		}
+	case PM_ButtonIconSize: {
+		ret = 20;
 		break;
 	}
 
-	case PM_MaximumDragDistance: {
-		ret = -1;
-		break;
-	}
 		
-	default:
+	default: {
 		ret = QCommonStyle::pixelMetric(metric, opt, widget);
 		break;
+	}
 	}
 
 	return ret;
