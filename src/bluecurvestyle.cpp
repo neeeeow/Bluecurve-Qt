@@ -908,9 +908,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
-		/*case CE_PushButtonLabel: {
+	case CE_PushButtonLabel: { // TODO: improve this
 		const QPushButton *button = (const QPushButton *) widget;
 		const QStyleOptionButton *buttonOpt = (const QStyleOptionButton *) opt; // Needed to check button options
+		QStyle::State flags = opt->state; 
 		QRect ir = r;
 
 		if (button->isDown() || button->isChecked()) {
@@ -925,15 +926,15 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			QStyleOption arrowOpt; // need to create a new styleoption for the arrow
 			arrowOpt.rect = ar;
 			arrowOpt.state = flags;
-			arrowOpt.palette = palette;
+			arrowOpt.palette = opt->palette;
 			
 		    drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p, widget);
 			ir.setWidth(ir.width() - mbi);
 		}
 
 		int tf = Qt::AlignVCenter | Qt::TextShowMnemonic;
-		//if (!styleHint(SH_UnderlineAccelerator, widget, QStyleOption::Default, 0))
-		//tf |= NoAccel; seems to be entirely deprecated in Qt6, so we ignore it...
+		if (!styleHint(SH_UnderlineShortcut, nullptr, nullptr, nullptr))
+			tf |= Qt::TextHideMnemonic;
 
 		if (!button->icon().isNull()) {
 			QIcon::Mode mode =
@@ -945,11 +946,11 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			if ( button->isCheckable() && button->isChecked() )
 				state = QIcon::On;
 
-			QPixmap pixmap = button->icon().pixmap( pixelMetric(PM_SmallIconSize, opt, widget), mode, state );
+			QPixmap pixmap = button->icon().pixmap( pixelMetric(PM_ButtonIconSize, opt, widget), mode, state );
 			int pixw = pixmap.width();
 			int pixh = pixmap.height();
 			
-                // content rectangle is pixmap + spacer + text bounding rectangle
+			// content rectangle is pixmap + spacer + text bounding rectangle
 
 			int csp = -2; // content spacer (between pixmap and text)
 			QFontMetrics fm = p->fontMetrics();
@@ -975,18 +976,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			tf |= Qt::AlignHCenter;
 		}
 
-		drawItemText(p, ir, tf, palette, (flags & State_Enabled), button->text(), QPalette::ButtonText);
-
-		if (flags & State_HasFocus) {
-			QStyleOption focusRectOpt;
-			focusRectOpt.rect = subElementRect(SE_PushButtonFocusRect, opt, widget);
-			focusRectOpt.state = flags;
-			focusRectOpt.palette = palette;
-			drawPrimitive(PE_FrameFocusRect, &focusRectOpt, p, widget);
-		}
+		drawItemText(p, ir, tf, opt->palette, (flags & State_Enabled), button->text(), QPalette::ButtonText);
 		
 		break;
-		}*/
+	}
 
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
