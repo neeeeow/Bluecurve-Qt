@@ -2155,33 +2155,34 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 						  QStyleHintReturn *hret) const
 {
 	int ret;
-	
+
 	switch (sh) {
 	case SH_EtchDisabledText:
+	case SH_ScrollBar_MiddleClickAbsolutePosition:
 	case SH_Slider_SnapToValue:
 	case SH_PrintDialog_RightAlignButtons:
 	case SH_FontDialog_SelectAssociatedText:
-	case SH_MenuBar_AltKeyNavigation:
-	case SH_MenuBar_MouseTracking:
-	case SH_Menu_MouseTracking:
 	case SH_Menu_SpaceActivatesItem:
-	case SH_ComboBox_ListMouseTracking:
-	case SH_ScrollBar_MiddleClickAbsolutePosition: {
+	case SH_MenuBar_AltKeyNavigation:
+	case SH_Menu_MouseTracking:
+	case SH_MenuBar_MouseTracking:
+	case SH_ComboBox_ListMouseTracking: {
 		ret = 1;
 		break;
 	}
-
+		
 	case SH_MainWindow_SpaceBelowMenuBar:
 	case SH_Menu_AllowActiveAndDisabled: {
 		ret = 0;
 		break;
-	}
+	}	
+		
 	default: {
 		ret = QCommonStyle::styleHint(sh, opt, widget, hret);
 		break;
 	}
 	}
-
+	
 	return ret;
 }
 
