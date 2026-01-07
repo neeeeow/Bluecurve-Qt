@@ -16,9 +16,6 @@
 #include <QCheckBox>
 #include <QRadioButton>
 
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
 
@@ -208,11 +205,11 @@ generate_bit (unsigned char alpha[], const QColor &color, double mult)
 	 int x, y;
   
 	 r = (int) (color.red() * mult);
-	 r = MIN(r, 255);
+	 r = std::min<int>(r, 255);
 	 g = (int) (color.green() * mult);
-	 g = MIN(g, 255);
+	 g = std::min<int>(g, 255);
 	 b = (int) (color.blue() * mult);
-	 b = MIN(b, 255);
+	 b = std::min<int>(b, 255);
   
 	 image = new QImage (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
 
