@@ -1112,10 +1112,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_MenuItem: {
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
-		if (!widget)
-			break;
 
-		const QMenu* menu = static_cast<const QMenu*>(widget);
+		//const QMenu* menu = static_cast<const QMenu*>(widget);
 		int tab = miOpt->reservedShortcutWidth;
 		int maxpmw = miOpt->maxIconWidth;
 
@@ -1134,9 +1132,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		} else {
 			p->fillRect(r, opt->palette.brush(QPalette::Button));
 		}
-
-		if (!miOpt)
-			break;
 
 		maxpmw = std::max(maxpmw, 22);
 
