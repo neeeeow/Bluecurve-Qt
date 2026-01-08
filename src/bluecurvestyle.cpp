@@ -2008,6 +2008,11 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
+	case PM_ToolBarItemSpacing: {
+		ret = 0;
+		break;
+	}
+
 	case PM_TabBarTabOverlap: {
 		ret = 1;
 		break;
@@ -2020,6 +2025,11 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 
 	case PM_TabBarTabVSpace: {
 		ret = 10;
+		break;
+	}
+
+	case PM_TabBarBaseHeight: {
+		ret = 0;
 		break;
 	}
 
@@ -2051,11 +2061,20 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
+	case PM_HeaderMarkSize: {
+		ret = 32;
+		break;
+	}
+
 	case PM_ButtonIconSize: {
 		ret = 20;
 		break;
 	}
 
+	case PM_SubMenuOverlap: {
+		ret = 2;
+		break;
+	}
 		
 	default: {
 		ret = QCommonStyle::pixelMetric(metric, opt, widget);
