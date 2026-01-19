@@ -1369,9 +1369,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		const QStyleOptionComboBox *comboboxOpt = qstyleoption_cast<const QStyleOptionComboBox *>(opt);
 		QRect frame, arrow, field;
 
-		frame = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxFrame, widget), opt->rect);
-		arrow = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxArrow, widget), opt->rect);
-		field = visualRect(opt->direction, subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget), opt->rect);
+		frame = subControlRect(CC_ComboBox, opt, SC_ComboBoxFrame, widget);
+		arrow = subControlRect(CC_ComboBox, opt, SC_ComboBoxArrow, widget);
+		field = subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget);
 
 		if ((opt->subControls & SC_ComboBoxFrame) && frame.isValid()) {
 			QStyleOption frameOpt;
@@ -2034,7 +2034,8 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 	case SH_MenuBar_AltKeyNavigation:
 	case SH_Menu_MouseTracking:
 	case SH_MenuBar_MouseTracking:
-	case SH_ComboBox_ListMouseTracking: {
+	case SH_ComboBox_ListMouseTracking:
+	case SH_UnderlineShortcut: {
 		ret = 1;
 		break;
 	}
@@ -2043,8 +2044,8 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 	case SH_Menu_AllowActiveAndDisabled: {
 		ret = 0;
 		break;
-	}	
-		
+	}
+	
 	default: {
 		ret = QCommonStyle::styleHint(sh, opt, widget, hret);
 		break;
