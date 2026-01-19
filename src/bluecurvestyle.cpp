@@ -27,172 +27,14 @@
 const double BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768, 0.665, 0.4, 0.205};
 
 static void
-rgb_to_hls (double *r, double *g, double *b) {
-	double min;
-	double max;
-	double red;
-	double green;
-	double blue;
-	double h, l, s;
-	double delta;
-
-	red = *r;
-	green = *g;
-	blue = *b;
-
-	if (red > green) {
-		if (red > blue)
-			max = red;
-		else
-			max = blue;
-
-		if (green < blue)
-			min = green;
-		else
-			min = blue;
-	} else {
-		if (green > blue)
-			max = green;
-		else
-			max = blue;
-
-		if (red < blue)
-			min = red;
-		else
-			min = blue;
-	}
-
-	l = (max + min) / 2;
-	s = 0;
-	h = 0;
-
-	if (max != min) {
-		if (l <= 0.5)
-			s = (max - min) / (max + min);
-		else
-			s = (max - min) / (2 - max - min);
-
-		delta = max -min;
-		if (red == max)
-			h = (green - blue) / delta;
-		else if (green == max)
-			h = 2 + (blue - red) / delta;
-		else if (blue == max)
-			h = 4 + (red - green) / delta;
-
-		h *= 60;
-		if (h < 0.0)
-			h += 360;
-	}
-
-	*r = h;
-	*g = l;
-	*b = s;
-}
-
-static void
-hls_to_rgb (double *h, double *l, double *s) {
-	double hue;
-	double lightness;
-	double saturation;
-	double m1, m2;
-	double r, g, b;
-
-	lightness = *l;
-	saturation = *s;
-
-	if (lightness <= 0.5)
-		m2 = lightness * (1 + saturation);
-	else
-		m2 = lightness + saturation - lightness * saturation;
-	m1 = 2 * lightness - m2;
-
-	if (saturation == 0) {
-		*h = lightness;
-		*l = lightness;
-		*s = lightness;
-	} else {
-		hue = *h + 120;
-		while (hue > 360)
-			hue -= 360;
-		while (hue < 0)
-			hue += 360;
-
-		if (hue < 60)
-			r = m1 + (m2 - m1) * hue / 60;
-		else if (hue < 180)
-			r = m2;
-		else if (hue < 240)
-			r = m1 + (m2 - m1) * (240 - hue) / 60;
-		else
-			r = m1;
-
-		hue = *h;
-		while (hue > 360)
-			hue -= 360;
-		while (hue < 0)
-			hue += 360;
-
-		if (hue < 60)
-			g = m1 + (m2 - m1) * hue / 60;
-		else if (hue < 180)
-			g = m2;
-		else if (hue < 240)
-			g = m1 + (m2 - m1) * (240 - hue) / 60;
-		else
-			g = m1;
-
-		hue = *h - 120;
-		while (hue > 360)
-			hue -= 360;
-		while (hue < 0)
-			hue += 360;
-
-		if (hue < 60)
-			b = m1 + (m2 - m1) * hue / 60;
-		else if (hue < 180)
-			b = m2;
-		else if (hue < 240)
-			b = m1 + (m2 - m1) * (240 - hue) / 60;
-		else
-			b = m1;
-
-		*h = r;
-		*l = g;
-		*s = b;
-	}
-}
-
-static void
 shade (const QColor &ca, QColor &cb, double k) {
-	int r,g,b;
-	double red;
-	double green;
-	double blue;
+	float h, s, l;
+	ca.getHslF(&h, &s, &l);
 
-	ca.getRgb(&r, &g, &b);
+	s *= k;
+	l *= k;
 
-	red = (double) r / 255.0;
-	green = (double) g / 255.0;
-	blue = (double) b / 255.0;
-
-	rgb_to_hls (&red, &green, &blue);
-
-	green *= k;
-	if (green > 1.0)
-		green = 1.0;
-	else if (green < 0.0)
-		green = 0.0;
-
-	blue *= k;
-	if (blue > 1.0)
-		blue = 1.0;
-	else if (blue < 0.0)
-		blue = 0.0;
-
-	hls_to_rgb (&red, &green, &blue);
-
-	cb.setRgb ((int)(red*255.0), (int)(green*255.0), (int)(blue*255.0));
+	cb.setHslF(h, qBound(0.0,s,1.0), qBound(0.0,l,1.0));
 }
 
 static QImage *
@@ -896,7 +738,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
-	case CE_PushButtonLabel: { // TODO: improve this
+		/*case CE_PushButtonLabel: { // TODO: improve this
 		const QPushButton *button = (const QPushButton *) widget;
 		const QStyleOptionButton *buttonOpt = (const QStyleOptionButton *) opt; // Needed to check button options
 		QStyle::State flags = opt->state; 
@@ -967,7 +809,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		drawItemText(p, ir, tf, opt->palette, (flags & State_Enabled), button->text(), QPalette::ButtonText);
 		
 		break;
-	}
+		}*/
 
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
@@ -1980,7 +1822,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		
 	case PM_SliderLength: {
 		ret=31;
-		if (widget->inherits("QSlider")) {
+		if (widget && widget->inherits("QSlider")) {
 			const QSlider *slider = static_cast<const QSlider*>(widget);
 			if (slider->orientation() == Qt::Horizontal) {
 				if (widget->width()<ret)
