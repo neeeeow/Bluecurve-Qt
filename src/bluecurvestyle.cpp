@@ -1127,38 +1127,27 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
-	case CE_CheckBoxLabel: {
-		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
-
-		if (opt->state & State_MouseOver) {
+	case CE_CheckBox:
+	case CE_RadioButton: {
+		if (opt->state & State_MouseOver) { // Highlight area when hovered
 			QRegion r(opt->rect);
-			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), opt->rect);
+			r -= subElementRect(SE_CheckBoxIndicator, opt, widget);
 			p->setClipRegion(r);
 			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
 			p->setClipping(false);
 		}
+
+		QCommonStyle::drawControl(control, opt, p, widget);
+		break;
+	}
+
+	case CE_CheckBoxLabel:
+	case CE_RadioButtonLabel: {
+		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
 
 		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
 		drawItemText(p, r, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
 					 opt->palette, opt->state & State_Enabled, checkboxOpt->text);	
-		
-		break;
-	}
-
-	case CE_RadioButtonLabel: {
-		const QStyleOptionButton *radioOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
-
-		if (opt->state & State_MouseOver) {
-			QRegion r(opt->rect);
-			r -= visualRect(opt->direction, subElementRect(SE_CheckBoxIndicator, opt, widget), opt->rect);
-			p->setClipRegion(r);
-			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
-			p->setClipping(false);
-		}
-
-		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
-		drawItemText(p, r, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
-					 opt->palette, opt->state & State_Enabled, radioOpt->text);	
 		
 		break;
 	}
@@ -1421,7 +1410,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 
 			if (opt->state & State_HasFocus) {
 				if (! comboboxOpt->editable) {
-					QRect fr = visualRect(opt->direction, subElementRect(SE_ComboBoxFocusRect, opt, widget), opt->rect);
+					QRect fr = subElementRect(SE_ComboBoxFocusRect, opt, widget);
 					fr.setRight(fr.right() - 3);
 					QStyleOption focusRectOpt;
 					focusRectOpt.state = opt->state | State_FocusAtBorder;
