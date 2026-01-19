@@ -1672,14 +1672,14 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 	case CC_SpinBox: {
 		int fw = pixelMetric( PM_SpinBoxFrameWidth, opt, widget);
 		QSize bs;
-		bs.setHeight( widget->height()/2 - fw );
+		bs.setHeight( opt->rect.height()/2 - fw );
 		if ( bs.height() < 8 )
 			bs.setHeight( 8 );
 		bs.setWidth( bs.height() * 8 / 6 ); 
 		//bs = bs.expandedTo( QApplication::globalStrut() ); no qt6 equivalent 
 		int y = fw;
 		int x, lx, rx;
-		x = widget->width() - y - bs.width() + 1;
+		x = opt->rect.width() - y - bs.width() + 1;
 		lx = fw;
 		rx = x - fw;
 		switch ( sc ) {
@@ -1692,11 +1692,11 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 			break;
 		}
 		case SC_SpinBoxEditField: {
-			ret.setRect(lx, fw, rx, widget->height() - 2*fw);
+			ret.setRect(lx, fw, rx, opt->rect.height() - 2*fw);
 			break;
 		}
 		case SC_SpinBoxFrame: {
-			ret = widget->rect();
+			ret = opt->rect;
 		}
 		default: {
 			break;
