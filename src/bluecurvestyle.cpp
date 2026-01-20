@@ -1459,7 +1459,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			up.adjust(1, 0, 0, 0);
 			p->fillRect(up, opt->palette.brush(QPalette::Button));
 
-			if (opt->activeSubControls == SC_SpinBoxUp)
+			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
 				p->setPen(cdata->shades[2]);
 			else
 				p->setPen(opt->palette.light().color());
@@ -1467,7 +1467,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			p->drawLine(up.left(), up.top(), up.right(), up.top());
 			p->drawLine(up.left(), up.top(), up.left(), up.bottom());
 
-			if (opt->activeSubControls == SC_SpinBoxUp)
+			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
 				p->setPen(opt->palette.light().color());
 			else
 				p->setPen(cdata->shades[2]);
@@ -1478,7 +1478,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			up.adjust(1, 0, 0, 0);
 
 			QStyleOption indicatorOpt;
-			indicatorOpt.state =  opt->state | ((opt->activeSubControls == SC_SpinBoxUp) ? State_On | State_Sunken : State_Raised);
+			indicatorOpt.state =  opt->state | (((opt->activeSubControls == SC_SpinBoxUp) &&
+												 (opt->state & State_Sunken)) ? State_On |
+												State_Sunken : State_Raised);
 			indicatorOpt.rect = up;
 			indicatorOpt.palette = opt->palette;
 			drawPrimitive(pe, &indicatorOpt, p);
@@ -1493,7 +1495,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			down.adjust(1, 0, 0, 0);
 			p->fillRect(down, opt->palette.brush(QPalette::Button));
 
-			if (opt->activeSubControls == SC_SpinBoxDown)
+			if ((opt->activeSubControls == SC_SpinBoxDown) && (opt->state & State_Sunken))
 				p->setPen(cdata->shades[2]);
 			else
 				p->setPen(opt->palette.light().color());
@@ -1501,7 +1503,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			p->drawLine(down.left(), down.top(), down.right(), down.top());
 			p->drawLine(down.left(), down.top(), down.left(), down.bottom());
 
-			if (opt->activeSubControls == SC_SpinBoxDown)
+			if ((opt->activeSubControls == SC_SpinBoxDown) && (opt->state & State_Sunken))
 				p->setPen(opt->palette.light().color());
 			else
 				p->setPen(cdata->shades[2]);
@@ -1514,7 +1516,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			down.adjust(1, 0, 0, 0);
 
 			QStyleOption indicatorOpt;
-			indicatorOpt.state =  opt->state | ((opt->activeSubControls == SC_SpinBoxDown) ? State_On | State_Sunken : State_Raised);
+			indicatorOpt.state =  opt->state | (((opt->activeSubControls == SC_SpinBoxDown) &&
+												 (opt->state & State_Sunken)) ? State_On |
+												State_Sunken : State_Raised);
 			indicatorOpt.rect = down;
 			indicatorOpt.palette = opt->palette;
 			drawPrimitive(pe, &indicatorOpt, p);
