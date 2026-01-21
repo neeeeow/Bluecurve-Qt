@@ -907,7 +907,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			}
 		}		
 
-		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : opt->palette.dark().color()));
+		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : cdata->shades[2]));
 		break;
 	}
 
@@ -1945,9 +1945,9 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 		break;
 	}
 
-	case CT_MenuItem: {
+	case CT_MenuItem:
+	case CT_MenuBarItem: {
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
-		int maxpmw = miOpt->maxIconWidth;
 		int w = contentsSize.width(), h = contentsSize.height();
 
 		if (miOpt->menuItemType == QStyleOptionMenuItem::Separator) {
@@ -1959,16 +1959,14 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 				h = 16;
 			}
 
-			if (! miOpt->icon.isNull()) {
-				h = std::max(h, pixelMetric(PM_SmallIconSize) + 6);
-			} else if (! miOpt->text.isNull()) {
-				h = std::max(h, opt->fontMetrics.height() + 8);
-			}
+			h = std::max({h, opt->fontMetrics.height() + 8, pixelMetric(PM_SmallIconSize) + 6});
 		}
 
 		// check is at least 16x16
-		maxpmw = std::max(maxpmw, 16);
-		w += maxpmw + 16;
+		if (contents == CT_MenuItem)
+			w += std::max(miOpt->maxIconWidth, 16) + 16;
+		else
+			w += 16;
 
 		if (!miOpt->text.isNull() && miOpt->text.indexOf('\t') >= 0)
 			w += 8;
