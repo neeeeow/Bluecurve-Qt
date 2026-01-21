@@ -600,7 +600,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}		
 
 	case PE_Frame:
-	case PE_FrameWindow: {
+	case PE_FrameWindow:
+	case PE_FrameMenu: {
 		QStyleOption optCopy(*opt);
 		if ( ! (optCopy.state & State_Sunken ) )
 			optCopy.state |= State_Raised;
@@ -609,8 +610,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
-	case PE_FrameMenu: {
-		drawLightBevel(p, opt);
+	case PE_PanelMenu: {
+		p->fillRect(r, opt->palette.window().color());
 		break;
 	}
 
@@ -1762,9 +1763,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	}
 
 	case PM_DefaultFrameWidth: {
-		if (widget && widget->inherits("QMenu")) {
-			ret = 3;
-		} else if (widget && widget->inherits("QStackedWidget")) {
+		if (widget && widget->inherits("QStackedWidget")) {
 			ret = 2;
 		} else {
 			ret = 1;
@@ -1891,6 +1890,11 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
+	case PM_MenuPanelWidth: {
+		ret = 3;
+		break;
+	}
+		
 	case PM_MenuVMargin: {
 		ret = 1;
 		break;
