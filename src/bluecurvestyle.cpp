@@ -443,6 +443,51 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
+	case PE_IndicatorButtonDropDown: {
+		QBrush thefill;
+		bool sunken =
+			(opt->state & (QStyle::State_On | QStyle::State_Sunken));
+
+		if (opt->state & QStyle::State_Enabled) {
+			if (sunken)
+				thefill = opt->palette.brush(QPalette::Midlight);
+			else
+				thefill = opt->palette.brush(QPalette::Button);
+		} else
+			thefill = opt->palette.brush(QPalette::Window);
+
+		p->setPen(opt->palette.dark().color());
+		p->drawLine(r.topLeft(),	 r.topRight());
+		p->drawLine(r.topRight(),	r.bottomRight());
+		p->drawLine(r.bottomRight(), r.bottomLeft());
+
+		if (opt->state & (QStyle::State_On | QStyle::State_Sunken | QStyle::State_Raised)) {
+			// button bevel
+			if (sunken)
+				p->setPen(opt->palette.mid().color());
+			else
+				p->setPen(opt->palette.light().color());
+
+			p->drawLine(r.x(), r.y() + 2,
+						r.x(), r.y() + r.height() - 3); // left
+			p->drawLine(r.x(), r.y() + 1,
+						r.x() + r.width() - 2, r.y() + 1); // top
+
+			if (sunken)
+				p->setPen(opt->palette.light().color());
+			else
+				p->setPen(opt->palette.mid().color());
+
+			p->drawLine(r.x() + r.width() - 2, r.y() + 2,
+						r.x() + r.width() - 2, r.y() + r.height() - 3); // right
+			p->drawLine(r.x() + 1, r.y() + r.height() - 2,
+						r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
+		}
+
+		p->fillRect(r.x() + 1, r.y() + 2, r.width() - 3, r.height() - 4, thefill);
+		break;
+	}
+
 	case PE_FrameButtonBevel:
 	case PE_FrameButtonTool: {
 		drawLightBevel(p, opt, 0, true);
