@@ -337,7 +337,7 @@ BluecurveStyle::drawTextRect(QPainter *p, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 
 	p->setPen(cdata->shades[5]);
-	p->drawRect(r);
+	p->drawRect(r.adjusted(0,0,-1,-1));
 
 	// button bevel
 	p->setPen(opt->palette.light().color());
