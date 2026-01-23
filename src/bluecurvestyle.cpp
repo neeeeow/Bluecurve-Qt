@@ -763,8 +763,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 
 		if ( opt->state & State_Enabled )
 			p->setPen( opt->state & (State_Selected | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
-		else
+		else {
+			p->setPen(Qt::white);
+			drawArrow(p, pe, x+1, y+1, width, height);
 			p->setPen(cdata->shades[7]);
+		}
 
 		drawArrow(p, pe, x, y, width, height);
 		
@@ -1276,6 +1279,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		QStyleOption arrowOpt(*opt);
 		arrowOpt.state = opt->state & ~State_MouseOver;
+		arrowOpt.rect = opt->rect.adjusted(4,4,-4,-4);
 	    drawPrimitive(pe, &arrowOpt, p, widget);
 	  
 		break;
