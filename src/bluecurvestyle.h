@@ -80,6 +80,18 @@ private:
 
 	void drawGradientBox(QPainter *p, QRect const &r, const QPalette &palette,
 						 const BluecurveColorData *cdata, bool horiz,
-						 double shade1, double shade2) const;	
+						 double shade1, double shade2) const;
+
+	void calculate_arrow_geometry(PrimitiveElement pe, int &x, int &y,
+								  int &width, int &height) const;
+
+	void drawArrow(QPainter *p, PrimitiveElement pe, int x,
+				   int y, int width, int height) const;
+
+	void arrow_draw_hline(QPainter *p, int x1, int x2,
+						  int y, bool last) const;
+
+	void arrow_draw_vline(QPainter *p, int y1, int y2,
+						  int x, bool last) const;
 	
 };

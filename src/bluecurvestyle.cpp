@@ -707,7 +707,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorArrowDown:
 	case PE_IndicatorArrowRight:
 	case PE_IndicatorArrowLeft: {
-		QPolygon a;
+		/*QPolygon a;
 
 		switch ( pe ) {
 		case PE_IndicatorArrowUp: {
@@ -748,7 +748,25 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			p->setPen(cdata->shades[7]);
 
 		p->drawPolyline(a);
-		p->restore();		
+		p->restore();*/
+
+		// get geometry
+		int x = r.x();
+		int y = r.y();
+		int width = r.width();
+		int height = r.height();
+
+		int original_width = width;
+		int original_x = x;
+
+		calculate_arrow_geometry(pe, x, y, width, height);
+
+		if ( opt->state & State_Enabled )
+			p->setPen( opt->state & (State_Selected | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
+		else
+			p->setPen(cdata->shades[7]);
+
+		drawArrow(p, pe, x, y, width, height);
 		
 		break;
 	}
@@ -2251,4 +2269,162 @@ BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
 	p->setPen(cdata->spots[0]);
 	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
 	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
+}
+
+void
+BluecurveStyle::calculate_arrow_geometry(PrimitiveElement pe,
+										 int &x,
+										 int &y,
+										 int &width,
+										 int &height) const
+{
+	int w = width;
+	int h = height;
+
+	switch (pe) {
+    case PE_IndicatorArrowUp:
+    case PE_IndicatorArrowDown:
+		w += (w % 2) - 1;
+		h = (w / 2 + 1) + 1;
+
+		if (h > height)
+		{
+			h = height;
+			w = 2 * (h - 1) - 1;
+		}
+      
+		if (pe == PE_IndicatorArrowDown)
+		{
+			if (height % 2 == 1 || h % 2 == 0)
+				height += 1;
+		}
+		else
+		{
+			if (height % 2 == 0 || h % 2 == 0)
+				height -= 1;
+		}
+		break;
+
+    case PE_IndicatorArrowRight:
+    case PE_IndicatorArrowLeft:
+		h += (h % 2) - 1;
+		w = (h / 2 + 1) + 1; 
+      
+		if (w > width)
+		{
+			w = width;
+			h = 2 * (w - 1) - 1;
+		}
+      
+		if (pe == PE_IndicatorArrowRight)
+		{
+			if (width % 2 == 1 || w % 2 == 0)
+				width += 1;
+		}
+		else
+		{
+			if (width % 2 == 0 || w % 2 == 0)
+				width -= 1;
+		}
+		break;
+      
+    default:
+
+		break;
+    }
+
+	x += (width - w) / 2;
+	y += (height - h) / 2;
+	height = h;
+	width = w;
+}
+
+void
+BluecurveStyle::drawArrow(QPainter *p,
+						  PrimitiveElement pe,
+						  int x,
+						  int y,
+						  int width,
+						  int height) const
+{
+	int i, j;
+	
+	switch (pe) {
+	case PE_IndicatorArrowDown: {
+		for (i = 0, j = -1; i < height; i++, j++)
+			arrow_draw_hline (p, x + j, x + width - j - 1, y + i, i == 0);
+		break;
+	}
+
+	case PE_IndicatorArrowUp: {
+		for (i = height - 1, j = -1; i >= 0; i--, j++)
+			arrow_draw_hline (p, x + j, x + width - j - 1, y + i, i == height - 1);
+		break;
+	}
+
+	case PE_IndicatorArrowLeft: {
+		for (i = width - 1, j = -1; i >= 0; i--, j++)
+			arrow_draw_vline (p, y + j, y + height - j - 1, x + i, i == width - 1);
+		break;
+	}
+
+	case PE_IndicatorArrowRight: {
+		for (i = 0, j = -1; i < width; i++, j++)
+			arrow_draw_vline (p, y + j, y + height - j - 1,  x + i, i == 0);
+		break;
+	}
+			
+	default: {
+		break;
+	}
+	}
+}
+
+void
+BluecurveStyle::arrow_draw_hline(QPainter *p,
+								 int x1,
+								 int x2,
+								 int y,
+								 bool last) const
+{
+	if (x2 - x1 < 7 && !last)
+		p->drawLine(x1, y, x2, y);
+	else if (last) {
+		if (x2 - x1 <= 7) {
+			p->drawPoint(x1+1, y);
+			p->drawPoint(x2-1, y);
+		}
+		else {
+			p->drawPoint(x1+2, y);
+			p->drawPoint(x2-2, y);
+		}
+    }
+	else {
+		p->drawLine(x1, y, x1+2, y);
+		p->drawLine(x2-2, y, x2, y);
+    }
+		
+}
+
+void
+BluecurveStyle::arrow_draw_vline(QPainter *p,
+								 int y1,
+								 int y2,
+								 int x,
+								 bool last) const
+{
+	if (y2 - y1 < 7 && !last)
+		p->drawLine(x, y1, x, y2);
+	else if (last) {
+		//gdk_draw_line (window, gc, x, y1+2, x, y1+2);
+		//gdk_draw_line (window, gc, x, y2-2, x, y2-2);
+		p->drawPoint(x, y1+2);
+		p->drawPoint(x, y2-2);
+    }
+	else {
+		//gdk_draw_line (window, gc, x, y1, x, y1+2);
+		//gdk_draw_line (window, gc, x, y2-2, x, y2);
+		p->drawLine(x, y1, x, y1+2);
+		p->drawLine(x, y2-2, x, y2);
+    }
 }
