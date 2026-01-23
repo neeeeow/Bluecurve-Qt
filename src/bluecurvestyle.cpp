@@ -2271,6 +2271,9 @@ BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
 	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
 }
 
+/* Arrow drawing logic taken from Bluecurve GTK+ 2.0 engine
+   Copyright: Garrett LeSage, Alexander Larsson */
+
 void
 BluecurveStyle::calculate_arrow_geometry(PrimitiveElement pe,
 										 int &x,
@@ -2416,14 +2419,10 @@ BluecurveStyle::arrow_draw_vline(QPainter *p,
 	if (y2 - y1 < 7 && !last)
 		p->drawLine(x, y1, x, y2);
 	else if (last) {
-		//gdk_draw_line (window, gc, x, y1+2, x, y1+2);
-		//gdk_draw_line (window, gc, x, y2-2, x, y2-2);
 		p->drawPoint(x, y1+2);
 		p->drawPoint(x, y2-2);
     }
 	else {
-		//gdk_draw_line (window, gc, x, y1, x, y1+2);
-		//gdk_draw_line (window, gc, x, y2-2, x, y2);
 		p->drawLine(x, y1, x, y1+2);
 		p->drawLine(x, y2-2, x, y2);
     }
