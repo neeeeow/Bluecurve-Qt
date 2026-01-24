@@ -775,9 +775,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorSpinUp:
 	case PE_IndicatorSpinDown: {
 		QStyleOption optCopy(*opt);
-		optCopy.rect = QRect(0,0,7,7);
-		optCopy.rect.moveCenter(opt->rect.center());
-		optCopy.rect.translate(-1,1);
+	    optCopy.rect = opt->rect.adjusted(1,3,-3,-1);
 		
 		if (pe==PE_IndicatorSpinUp)
 			drawPrimitive(PE_IndicatorArrowUp, &optCopy, p, widget);
