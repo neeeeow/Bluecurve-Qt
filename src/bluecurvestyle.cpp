@@ -750,14 +750,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		p->drawPolyline(a);
 		p->restore();*/
 
-		// get geometry
-		int x = r.x();
-		int y = r.y();
-		int width = r.width();
-		int height = r.height();
-
-		int original_width = width;
-		int original_x = x;
+		// get button geometry
+		// add 1px of padding to make room for arrow shadow
+		int x = r.x() + 1;
+		int y = r.y() + 1;
+		int width = r.width() - 2;
+		int height = r.height() - 2;
 
 		calculate_arrow_geometry(pe, x, y, width, height);
 
@@ -776,16 +774,16 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 
 	case PE_IndicatorSpinUp:
 	case PE_IndicatorSpinDown: {
-		p->setPen(cdata->shades[7]);
-		p->setBrush(Qt::NoBrush);
-		QPolygon a;
-		if (pe==PE_IndicatorSpinUp)
-			a.setPoints(8,  -3,0,  -1,-2,  1,0,  1,1,  -1,-1,  -3,1,  -3,0,  1,0);
-		else
-			a.setPoints(8,  -3,-1,  -1,1,  1,-1,  1,-2,  -1,0,  -3,-2,  -3,-1,  1,-1);
+		QStyleOption optCopy(*opt);
+		optCopy.rect = QRect(0,0,7,7);
+		optCopy.rect.moveCenter(opt->rect.center());
+		optCopy.rect.translate(-1,1);
 		
-		a.translate(r.x() + r.width() / 2, r.y() + r.height() / 2 + 1);
-		p->drawPolyline(a);
+		if (pe==PE_IndicatorSpinUp)
+			drawPrimitive(PE_IndicatorArrowUp, &optCopy, p, widget);
+		else
+			drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
+		
 		break;
 		}		
 		
@@ -1279,7 +1277,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		QStyleOption arrowOpt(*opt);
 		arrowOpt.state = opt->state & ~State_MouseOver;
-		arrowOpt.rect = opt->rect.adjusted(4,4,-4,-4);
+		arrowOpt.rect = opt->rect.adjusted(3,3,-3,-3);
 	    drawPrimitive(pe, &arrowOpt, p, widget);
 	  
 		break;
