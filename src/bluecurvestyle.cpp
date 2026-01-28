@@ -707,49 +707,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorArrowDown:
 	case PE_IndicatorArrowRight:
 	case PE_IndicatorArrowLeft: {
-		/*QPolygon a;
-
-		switch ( pe ) {
-		case PE_IndicatorArrowUp: {
-		    a.setPoints(11,   3,1,  0,-2,  -3,1,  -2,0,  -2,2,  0,-1,  2,1,  2,2,  0,0,  -1,1,  1,1);
-			break;
-		}
-
-		case PE_IndicatorArrowDown: {
-			a.setPoints(11,   3,-1,  0,2,  -3,-1,  -2,0,  -2,-2,  0,1,  2,-1,  2,-2,  0,0,  -1,-1,  1,-1);
-			break;
-		}
-
-		case PE_IndicatorArrowRight: {
-			a.setPoints(13,  0,-3,  -1,-2,  1,-2,  2,-1,  0,-1,  1,0,  3,0,  2,1,  0,1,  -1,2,  1,2,  0,3,  0,0);
-			break;
-		}
-
-		case PE_IndicatorArrowLeft: {
-			a.setPoints(13,  0,-3,  1,-2,  -1,-2,  -2,-1,  0,-1,  -1,0,  -3,0,  -2,1,  0,1,  1,2,  -1,2,  0,3,  0,0);
-			break;
-		}
-
-		default: {
-			break;
-		}
-		}
-
-		if (a.isEmpty())
-			return;
-
-		p->save();
-		a.translate( (r.x() + r.width() / 2), 
-					 (r.y() + r.height() / 2));
-		
-		if ( opt->state & State_Enabled )
-			p->setPen( opt->state & (State_Selected | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
-		else
-			p->setPen(cdata->shades[7]);
-
-		p->drawPolyline(a);
-		p->restore();*/
-
 		// get button geometry
 		// add 1px of padding to make room for arrow shadow
 		int x = r.x() + 1;
@@ -760,7 +717,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		calculate_arrow_geometry(pe, x, y, width, height);
 
 		if ( opt->state & State_Enabled )
-			p->setPen( opt->state & (State_Selected | State_MouseOver) ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
+			p->setPen( opt->state & State_Selected ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
 		else {
 			p->setPen(Qt::white);
 			drawArrow(p, pe, x+1, y+1, width, height);
@@ -801,79 +758,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
-		/*case CE_PushButtonLabel: { // TODO: improve this
-		const QPushButton *button = (const QPushButton *) widget;
-		const QStyleOptionButton *buttonOpt = (const QStyleOptionButton *) opt; // Needed to check button options
-		QStyle::State flags = opt->state; 
-		QRect ir = r;
-
-		if (button->isDown() || button->isChecked()) {
-			flags |= State_Sunken;
-			ir.translate(pixelMetric(PM_ButtonShiftHorizontal, opt, widget), pixelMetric(PM_ButtonShiftVertical, opt, widget));
-		}
-
-		if (buttonOpt->features & QStyleOptionButton::HasMenu) {
-			int mbi = pixelMetric(PM_MenuButtonIndicator, opt, widget);
-			QRect ar(ir.right() - mbi, ir.y() + 2, mbi - 4, ir.height() - 4);
-
-			QStyleOption arrowOpt; // need to create a new styleoption for the arrow
-			arrowOpt.rect = ar;
-			arrowOpt.state = flags;
-			arrowOpt.palette = opt->palette;
-			
-		    drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p, widget);
-			ir.setWidth(ir.width() - mbi);
-		}
-
-		int tf = Qt::AlignVCenter | Qt::TextShowMnemonic;
-		if (!styleHint(SH_UnderlineShortcut, nullptr, nullptr, nullptr))
-			tf |= Qt::TextHideMnemonic;
-
-		if (!button->icon().isNull()) {
-			QIcon::Mode mode =
-				button->isEnabled() ? QIcon::Normal : QIcon::Disabled;
-			if ( mode == QIcon::Normal && button->hasFocus() )
-				mode = QIcon::Active;
-
-			QIcon::State state = QIcon::Off;
-			if ( button->isCheckable() && button->isChecked() )
-				state = QIcon::On;
-
-			QPixmap pixmap = button->icon().pixmap( pixelMetric(PM_ButtonIconSize, opt, widget), mode, state );
-			int pixw = pixmap.width();
-			int pixh = pixmap.height();
-			
-			// content rectangle is pixmap + spacer + text bounding rectangle
-
-			int csp = -2; // content spacer (between pixmap and text)
-			QFontMetrics fm = p->fontMetrics();
-			int contw;
-			if (!button->text().isEmpty())
-				contw = pixw + fm.horizontalAdvance(button->text()) + csp; // width of pixmap + text
-			else
-				contw = pixw;
-			int contx = ir.x() + ir.width()/2 - contw/2; // upper left corner of content rectangle
-
-			//Center the icon if there is no text
-			if ( button->text().isEmpty() )
-				p->drawPixmap( ir.x() + ir.width() / 2 - pixw / 2, ir.y() + ir.height() / 2 - pixh / 2, pixmap );
-			else 
-				p->drawPixmap( contx, ir.y() + ir.height() / 2 - pixh / 2, pixmap );
-			ir.setLeft(contx);
-			ir.setWidth(contw);
-			
-			// right-align text in the content rectangle, if there is any
-			if (!button->text().isEmpty())
-				tf |= Qt::AlignRight;		
-		} else {
-			tf |= Qt::AlignHCenter;
-		}
-
-		drawItemText(p, ir, tf, opt->palette, (flags & State_Enabled), button->text(), QPalette::ButtonText);
-		
-		break;
-		}*/
-
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
 		bool below = false;
@@ -1113,7 +997,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		if (miOpt->menuItemType == QStyleOptionMenuItem::SubMenu) {
 			QStyleOption arrowOpt;
 			arrowOpt.state = opt->state;
-			arrowOpt.rect = sr;
+			arrowOpt.rect = QRect(0,0,8,9); // arrow dimensions taken from GTK+2 theme
+			arrowOpt.rect.moveCenter(sr.center());
 			arrowOpt.palette = opt->palette;
 			drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrowOpt, p, widget);
 		}
@@ -1440,7 +1325,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		if ((opt->subControls & SC_ComboBoxArrow) && arrow.isValid()) {
 			QStyleOption arrowOpt;
 			arrowOpt.state = opt->state & ~State_MouseOver;
-			arrowOpt.rect = arrow;
+			arrowOpt.rect = QRect(0,0,9,8);
+			arrowOpt.rect.moveCenter(arrow.center());
 			arrowOpt.palette = opt->palette;
 			
 			drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p);
