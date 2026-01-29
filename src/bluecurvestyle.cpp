@@ -610,7 +610,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_IndicatorDockWidgetResizeHandle: {
-		p->fillRect(r, opt->palette.window().color());
+		/*p->fillRect(r, opt->palette.window().color());
 		if (opt->state & State_Horizontal) {
 			p->setPen(opt->palette.highlight().color().lighter());
 			p->drawLine(r.left() + 1, r.top() + 1, r.right() - 1, r.top() + 1);
@@ -626,7 +626,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			p->setPen(opt->palette.highlight().color().darker());
 			p->drawLine(r.left() + 3, r.top() + 1, r.left() + 3, r.bottom() - 1);
 		}
-		break;		
+		break;*/
+
+		QStyleOption dockWidgetHandle(*opt);
+		bool horizontal = opt->state & State_Horizontal;
+        dockWidgetHandle.state.setFlag(State_Horizontal, !horizontal);
+		drawControl(CE_Splitter, &dockWidgetHandle, p, widget);
+		break;
 	}
 
 	case PE_PanelLineEdit: {
@@ -1128,19 +1134,19 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->fillRect(r, opt->palette.midlight());
 		
 		if (opt->state & State_Horizontal) {
-			int y_mid = r.height()/2;
+			int y_mid = r.center().y()+2;
 			for (int i=0; i< 21; i=i+5) {
 				p->setPen(cdata->shades[5]);
 				p->drawLine(r.x()+1, y_mid-10+i, r.right()-1, y_mid-10+i-3);
-				p->setPen(opt->palette.light().color());
+				p->setPen(Qt::white);
 				p->drawLine(r.x()+1, y_mid-10+i+1, r.right()-1, y_mid-10+i-2);
 			}
 		} else {
-			int x_mid = r.width()/2;
+			int x_mid = r.center().x()+2;
 			for (int i=0; i< 21; i=i+5) {
 				p->setPen(cdata->shades[5]);
 				p->drawLine(x_mid-10+i+3, r.y()+1, x_mid-10+i, r.bottom()-1);
-				p->setPen(opt->palette.light().color());
+				p->setPen(Qt::white);
 				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
 			}
 		}
@@ -1980,8 +1986,9 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
-	case PM_DockWidgetSeparatorExtent: {
-		ret = 4;
+	case PM_DockWidgetSeparatorExtent:
+	case PM_SplitterWidth: {
+		ret = 6;
 		break;
 	}
 
@@ -2027,11 +2034,6 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 
 	case PM_ProgressBarChunkWidth: {
 		ret = 2;
-		break;
-	}
-
-	case PM_SplitterWidth: {
-		ret = 6;
 		break;
 	}
 
