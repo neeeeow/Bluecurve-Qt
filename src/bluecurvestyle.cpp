@@ -186,7 +186,8 @@ void
 BluecurveStyle::polish(QWidget *widget)
 {
 	if (widget->inherits("QAbstractButton") ||
-		widget->inherits("QComboBox"))
+		widget->inherits("QComboBox") ||
+		widget->inherits("QSplitterHandle"))
 		widget->setAttribute(Qt::WA_Hover, true);
 
 	if (widget->inherits("QScrollBar") ||
@@ -1123,6 +1124,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_Splitter: {
+		if (opt->state & State_MouseOver)
+			p->fillRect(r, opt->palette.midlight());
+		
 		if (opt->state & State_Horizontal) {
 			int y_mid = r.height()/2;
 			for (int i=0; i< 21; i=i+5) {
@@ -1140,6 +1144,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
 			}
 		}
+
+		break;
 	}
 
 	case CE_ScrollBarAddLine:
