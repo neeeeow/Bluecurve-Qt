@@ -427,15 +427,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		const QBrush *fill;
 
 		if (opt->state & QStyle::State_Enabled) {
-			if (opt->state & (QStyle::State_On | QStyle::State_Sunken)) {
-				fill = &opt->palette.brush(QPalette::Dark);
-			} else {
-				if (opt->state & QStyle::State_MouseOver)
-					fill = &opt->palette.brush(QPalette::Midlight);
-				else
-					fill = &opt->palette.brush(QPalette::Button);
-			}
-			 
+			if (opt->state & QStyle::State_Sunken)
+				fill = &opt->palette.brush(QPalette::Mid);
+			else if (opt->state & QStyle::State_MouseOver)
+				fill = &opt->palette.brush(QPalette::Midlight);
+			else
+				fill = (opt->state & QStyle::State_On) ? &opt->palette.brush(QPalette::Mid)
+					: &opt->palette.brush(QPalette::Button); 
 		} else
 			fill = &opt->palette.brush(QPalette::Window);
 
@@ -444,47 +442,52 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_IndicatorButtonDropDown: {
-		QBrush thefill;
+		QBrush fill;
 		bool sunken =
 			(opt->state & (QStyle::State_On | QStyle::State_Sunken));
+		QRect br = r;
 
 		if (opt->state & QStyle::State_Enabled) {
-			if (sunken)
-				thefill = opt->palette.brush(QPalette::Midlight);
+			if (opt->state & QStyle::State_Sunken)
+				fill = opt->palette.brush(QPalette::Mid);
+			else if (opt->state & QStyle::State_MouseOver)
+				fill = opt->palette.brush(QPalette::Midlight);
 			else
-				thefill = opt->palette.brush(QPalette::Button);
+				fill = (opt->state & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
+					: opt->palette.brush(QPalette::Button); 
 		} else
-			thefill = opt->palette.brush(QPalette::Window);
+			fill = opt->palette.brush(QPalette::Window);
 
-		p->setPen(opt->palette.dark().color());
+		p->setPen(sunken ? cdata->shades[6] : cdata->shades[4]);
+		p->drawLine(r.topLeft(), r.bottomLeft());
+		p->setPen(cdata->shades[6]);
 		p->drawLine(r.topLeft(),	 r.topRight());
 		p->drawLine(r.topRight(),	r.bottomRight());
 		p->drawLine(r.bottomRight(), r.bottomLeft());
 
-		if (opt->state & (QStyle::State_On | QStyle::State_Sunken | QStyle::State_Raised)) {
+		if (opt->state & (QStyle::State_On |
+						  QStyle::State_Sunken | QStyle::State_Raised)) {
 			// button bevel
-			if (sunken)
-				p->setPen(opt->palette.mid().color());
-			else
-				p->setPen(opt->palette.light().color());
-
-			p->drawLine(r.x(), r.y() + 2,
-						r.x(), r.y() + r.height() - 3); // left
-			p->drawLine(r.x(), r.y() + 1,
-						r.x() + r.width() - 2, r.y() + 1); // top
-
-			if (sunken)
-				p->setPen(opt->palette.light().color());
-			else
-				p->setPen(opt->palette.mid().color());
-
+			p->setPen(sunken ? Qt::white : cdata->shades[2]);
 			p->drawLine(r.x() + r.width() - 2, r.y() + 2,
 						r.x() + r.width() - 2, r.y() + r.height() - 3); // right
 			p->drawLine(r.x() + 1, r.y() + r.height() - 2,
 						r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
+
+			p->setPen(sunken ? cdata->shades[2] : Qt::white);
+			p->drawLine(r.x() + 1, r.y() + 2,
+						r.x() + 1, r.y() + r.height() - 2); // left
+			p->drawLine(r.x() + 1, r.y() + 1,
+						r.x() + r.width() - 2, r.y() + 1); // top
+
+			br.adjust(2, 2, -2, -2);
+		} else {
+			br.adjust(1, 1, -1, -1);
 		}
 
-		p->fillRect(r.x() + 1, r.y() + 2, r.width() - 3, r.height() - 4, thefill);
+		// fill
+		p->fillRect(br, fill);
+		
 		break;
 	}
 
@@ -1595,6 +1598,118 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			optCopy.subControls = SC_SliderTickmarks;
 			QCommonStyle::drawComplexControl(control, &optCopy, p, widget);
 		}
+		break;
+	}
+
+	case CC_ToolButton: {
+		const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+		if (!toolbutton)
+			break;
+
+		QRect button, menuarea;
+		button = subControlRect(control, toolbutton, SC_ToolButton, widget);
+		menuarea = subControlRect(control, toolbutton, SC_ToolButtonMenu, widget);
+
+		State bflags = toolbutton->state & ~State_Sunken;
+
+		if (bflags & State_AutoRaise) {
+			if (!(bflags & State_MouseOver) || !(bflags & State_Enabled)) {
+				bflags &= ~State_Raised;
+			}
+		}
+		State mflags = bflags;
+		if (toolbutton->state & State_Sunken) {
+			if (toolbutton->activeSubControls & SC_ToolButton)
+				bflags |= State_Sunken;
+			mflags |= State_Sunken;
+		}
+
+		QStyleOption tool = *toolbutton;
+		if (toolbutton->subControls & SC_ToolButton) {
+			if (bflags & (State_Sunken | State_On | State_Raised)) {
+				if (toolbutton->subControls & SC_ToolButtonMenu) {
+					QBrush fill;
+					bool sunken =
+						(bflags & (QStyle::State_On | QStyle::State_Sunken));
+					QRect br = button;
+
+					if (bflags & QStyle::State_Enabled) {
+						if (bflags & QStyle::State_Sunken)
+							fill = opt->palette.brush(QPalette::Mid);
+						else if (bflags & QStyle::State_MouseOver)
+							fill = opt->palette.brush(QPalette::Midlight);
+						else
+							fill = (bflags & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
+								: opt->palette.brush(QPalette::Button); 
+					} else
+						fill = opt->palette.brush(QPalette::Window);
+
+					p->setPen(cdata->shades[6]);
+					p->drawLine(button.topLeft(), button.topRight());
+					p->drawLine(button.topLeft(), button.bottomLeft());
+					p->drawLine(button.bottomLeft(), button.bottomRight());
+
+					if (bflags & (QStyle::State_On |
+									  QStyle::State_Sunken | QStyle::State_Raised)) {
+						// button bevel
+						p->setPen(sunken ? Qt::white : cdata->shades[2]);
+						if (sunken)
+							p->drawLine(button.x() + button.width() - 1, button.y() + 2,
+										button.x() + button.width() - 1, button.y() + button.height() - 3); // right
+						p->drawLine(button.x() + 1, button.y() + button.height() - 2,
+									button.x() + button.width() - 1, button.y() + button.height() - 2); // bottom
+
+						p->setPen(sunken ? cdata->shades[2] : Qt::white);
+						p->drawLine(button.x() + 1, button.y() + 2,
+									button.x() + 1, button.y() + button.height() - 2); // left
+						p->drawLine(button.x() + 1, button.y() + 1,
+									button.x() + button.width() - 1, button.y() + 1); // top
+
+					    br.adjust(2, 2, -1, -2);
+					} else {
+						br.adjust(1, 1, 0, -1);
+					}
+
+					p->fillRect(br, fill);
+					
+				} else {					
+					tool.rect = button;
+					tool.state = bflags;
+					drawPrimitive(PE_PanelButtonTool, &tool, p, widget);
+				}
+			}
+		}
+
+		if (toolbutton->state & State_HasFocus) {
+			QStyleOptionFocusRect fr;
+			fr.QStyleOption::operator=(*toolbutton);
+			fr.rect.adjust(3, 3, -3, -3);
+			if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
+				fr.rect.adjust(0, 0, -proxy()->pixelMetric(QStyle::PM_MenuButtonIndicator,
+														   toolbutton, widget), 0);
+			drawPrimitive(PE_FrameFocusRect, &fr, p, widget);
+		}
+		QStyleOptionToolButton label = *toolbutton;
+		label.state = bflags;
+		int fw = proxy()->pixelMetric(PM_DefaultFrameWidth, opt, widget);
+		label.rect = button.adjusted(fw, fw, -fw, -fw);
+		drawControl(CE_ToolButtonLabel, &label, p, widget);
+
+		if (toolbutton->subControls & SC_ToolButtonMenu) {
+			tool.rect = menuarea;
+			tool.state = mflags;
+			if (mflags & (State_Sunken | State_On | State_Raised))
+				drawPrimitive(PE_IndicatorButtonDropDown, &tool, p, widget);
+			drawPrimitive(PE_IndicatorArrowDown, &tool, p, widget);
+		} else if (toolbutton->features & QStyleOptionToolButton::HasMenu) {
+			int mbi = pixelMetric(PM_MenuButtonIndicator, toolbutton, widget);
+			QRect ir = toolbutton->rect;
+			QStyleOptionToolButton newBtn = *toolbutton;
+			newBtn.rect = QRect(ir.right() + 5 - mbi, ir.y() + ir.height() - mbi + 4, mbi - 6, mbi - 6);
+			newBtn.rect = visualRect(toolbutton->direction, button, newBtn.rect);
+			drawPrimitive(PE_IndicatorArrowDown, &newBtn, p, widget);
+		}
+
 		break;
 	}
 		
