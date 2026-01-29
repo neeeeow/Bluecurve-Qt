@@ -610,24 +610,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_IndicatorDockWidgetResizeHandle: {
-		/*p->fillRect(r, opt->palette.window().color());
-		if (opt->state & State_Horizontal) {
-			p->setPen(opt->palette.highlight().color().lighter());
-			p->drawLine(r.left() + 1, r.top() + 1, r.right() - 1, r.top() + 1);
-			p->setPen(opt->palette.highlight().color());
-			p->drawLine(r.left() + 1, r.top() + 2, r.right() - 1, r.top() + 2);
-			p->setPen(opt->palette.highlight().color().darker());
-			p->drawLine(r.left() + 1, r.top() + 3, r.right() - 1, r.top() + 3);
-		} else {
-			p->setPen(opt->palette.highlight().color().lighter());
-			p->drawLine(r.left() + 1, r.top() + 1, r.left() + 1, r.bottom() - 1);
-			p->setPen(opt->palette.highlight().color());
-			p->drawLine(r.left() + 2, r.top() + 1, r.left() + 2, r.bottom() - 1);
-			p->setPen(opt->palette.highlight().color().darker());
-			p->drawLine(r.left() + 3, r.top() + 1, r.left() + 3, r.bottom() - 1);
-		}
-		break;*/
-
 		QStyleOption dockWidgetHandle(*opt);
 		bool horizontal = opt->state & State_Horizontal;
         dockWidgetHandle.state.setFlag(State_Horizontal, !horizontal);
@@ -1110,8 +1092,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
-		/* CE's that were PE's in Qt3 go below */
-
 	case CE_HeaderSection: {
 		const QBrush *fill;
 		QStyle::State state = ((opt->state | State_Sunken) ^ State_Sunken) | State_Raised;
@@ -1250,6 +1230,131 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(x1 + 5, y1 + 1,	x1 + 1, y1 + 5);
 			p->drawLine(x1 + 5, y1 + 1 + 5,	x1 + 1, y1 + 5 + 5);
 			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
+		}
+		
+		break;
+	}
+
+	case CE_SizeGrip: {
+		const QStyleOptionSizeGrip *grip = qstyleoption_cast<const QStyleOptionSizeGrip *>(opt);
+
+		int x = r.x();
+		int y = r.y();
+		int width = r.width();
+		int height = r.height();
+
+		switch (grip->corner) {
+		case Qt::TopLeftCorner: {
+			x += 2;
+			y += 2;
+			width -= 2;
+			height -= 2;
+			
+			int xi, yi;
+
+			xi = x + width;
+			yi = y + height;
+
+			while (xi > x + 3) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(xi, y, x, yi);
+
+				--xi;
+				--yi;
+
+				p->setPen(Qt::white);
+				p->drawLine(xi, y, x, yi);
+
+				xi -= 3;
+				yi -= 3;	    
+			}
+			
+			break;
+		}
+
+		case Qt::TopRightCorner: {
+			y += 2;
+			width -= 2;
+			height -= 2;
+			
+			int xi, yi;
+
+			xi = x;
+			yi = y + height;
+
+			while (xi < (x + width - 3)) {
+				p->setPen(Qt::white);
+				p->drawLine(xi, y, x + width, yi);
+
+				++xi;
+				--yi;
+
+				p->setPen(cdata->shades[5]);
+				p->drawLine(xi, y, x + width, yi);
+
+				xi += 3;
+				yi -= 3;
+			}
+			
+			break;
+		}
+
+		case Qt::BottomLeftCorner: {
+			x += 2;
+			width -= 2;
+			height -= 2;
+			
+			int xi, yi;
+
+			xi = x + width;
+			yi = y;
+
+			while (xi > x + 3) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(x, yi, xi, y + height);
+
+				--xi;
+				++yi;
+
+				p->setPen(Qt::white);
+				p->drawLine(x, yi, xi, y + height);
+
+				xi -= 3;
+				yi += 3;
+			}
+	   
+			break;
+		}
+			
+		case Qt::BottomRightCorner: {
+			width -= 2;
+			height -= 2;
+			
+			int xi, yi;
+
+			xi = x;
+			yi = y;
+
+			while (xi < (x + width - 3)) {
+				p->setPen(Qt::white);
+				p->drawLine(xi, y + height, x + width, yi);
+
+				++xi;
+				++yi;
+
+				p->setPen(cdata->shades[5]);
+				p->drawLine(xi, y + height, x + width, yi);
+            
+				xi += 3;
+				yi += 3;
+			}
+			
+			break;
+		}
+			
+		default: { // should never reach this point...
+			break;
+		}
 		}
 		
 		break;
@@ -2157,6 +2262,12 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 
 		ret = QSize(w, h);
 		break; 
+	}
+
+	case CT_SizeGrip: {
+		int size = std::max({ret.width(), ret.height(), 18});
+		ret = QSize(size,size);
+		break;
 	}
 		
 	default: {
