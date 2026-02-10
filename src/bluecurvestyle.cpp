@@ -1673,40 +1673,43 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			p->fillRect (fillr, opt->palette.brush(QPalette::Button));
 
 			if (sliderOpt->orientation == Qt::Horizontal) {
-				int x1 = handle.x() + handle.width() / 2 - 8;
-				int y1 = handle.y() + (handle.height() - 6) / 2;
+				int x1 = handle.x() + handle.width() / 2 - 5;
+				int y1 = handle.y() + (handle.height() - 7) / 2;
+
 				p->setPen(cdata->shades[5]);
-				p->drawLine(x1 + 5, y1,
-							x1, y1 + 5);
-				p->drawLine(x1 + 5 + 5, y1,
-							x1 + 5, y1 + 5);
-				p->drawLine(x1 + 5 + 5*2, y1,
-							x1 + 5*2, y1 + 5);
-				
+				p->drawLine(x1 + 0, y1 + 4,
+							x1 + 3, y1 + 1);
+				p->drawLine(x1 + 2, y1 + 6,
+							x1 + 8, y1 + 0);
+				p->drawLine(x1 + 7, y1 + 5,
+							x1 + 10, y1 + 2);
+
 				p->setPen(Qt::white);
-				p->drawLine(x1 + 5, y1 + 1,
-							x1 + 1, y1 + 5);
-				p->drawLine(x1 + 5 + 5, y1 + 2,
-							x1 + 5 + 1, y1 + 5);
-				p->drawLine(x1 + 5 + 5*2, y1 + 1,
-							x1 + 5*2 + 1, y1 + 5);
+				p->drawLine(x1 + 1, y1 + 4,
+							x1 + 3, y1 + 2);
+				p->drawLine(x1 + 3, y1 + 6,
+							x1 + 8, y1 + 1);
+				p->drawLine(x1 + 8, y1 + 5,
+							x1 + 10, y1 + 3);
 			} else {
-				int x1 = handle.x() + (handle.width() - 6) / 2;
-				int y1 = handle.y() + handle.height() / 2 - 8;
+				int x1 = handle.x() + (handle.width() - 7) / 2;
+				int y1 = handle.y() + handle.height() / 2 - 5;
+
 				p->setPen(cdata->shades[5]);
-				p->drawLine(x1 + 5, y1,
-							x1, y1 + 5);
-				p->drawLine(x1 + 5, y1 + 5,
-							x1, y1 + 5 + 5);
-				p->drawLine(x1 + 5, y1 + 5*2,
-							x1, y1 + 5 + 5*2);
+				p->drawLine(x1 + 4, y1 + 0,
+							x1 + 1, y1 + 3);
+				p->drawLine(x1 + 6, y1 + 2,
+							x1 + 0, y1 + 8);
+				p->drawLine(x1 + 5, y1 + 7,
+							x1 + 2, y1 + 10);
+
 				p->setPen(Qt::white);
-				p->drawLine(x1 + 5, y1 + 1,
-							x1 + 1, y1 + 5);
-				p->drawLine(x1 + 5, y1 + 5 + 1,
-							x1 + 1, y1 + 5 + 5);
-				p->drawLine(x1 + 5, y1 + 5*2 + 1,
-							x1 + 1, y1 + 5 + 5*2);
+				p->drawLine(x1 + 4, y1 + 1,
+							x1 + 2, y1 + 3);
+				p->drawLine(x1 + 6, y1 + 3,
+							x1 + 1, y1 + 8);
+				p->drawLine(x1 + 5, y1 + 8,
+							x1 + 3, y1 + 10);
 			}
 		}
 
