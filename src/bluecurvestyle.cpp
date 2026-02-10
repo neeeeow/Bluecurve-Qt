@@ -427,18 +427,25 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_PanelButtonTool: {
 		const QBrush *fill;
 
-		if (opt->state & QStyle::State_Enabled) {
-			if (opt->state & QStyle::State_Sunken)
-				fill = &opt->palette.brush(QPalette::Mid);
-			else if (opt->state & QStyle::State_MouseOver)
-				fill = &opt->palette.brush(QPalette::Midlight);
-			else
-				fill = (opt->state & QStyle::State_On) ? &opt->palette.brush(QPalette::Mid)
-					: &opt->palette.brush(QPalette::Button); 
-		} else
-			fill = &opt->palette.brush(QPalette::Window);
+		if (opt->state & QStyle::State_Sunken)
+			fill = &opt->palette.brush(QPalette::Mid);
+		else if (opt->state & QStyle::State_MouseOver)
+			fill = &opt->palette.brush(QPalette::Midlight);
+		else
+			fill = (opt->state & QStyle::State_On) ? &opt->palette.brush(QPalette::Mid)
+				: &opt->palette.brush(QPalette::Button); 
 
 		drawLightBevel(p, opt, fill, true);
+
+		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+		if (!button)
+			break;
+
+		if (button->features & QStyleOptionButton::DefaultButton) {
+			p->setPen(Qt::black);
+			p->drawRect(r.adjusted(0,0,-1,-1));
+		}
+		
 		break;
 	}
 
