@@ -455,16 +455,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			(opt->state & (QStyle::State_On | QStyle::State_Sunken));
 		QRect br = r;
 
-		if (opt->state & QStyle::State_Enabled) {
-			if (opt->state & QStyle::State_Sunken)
-				fill = opt->palette.brush(QPalette::Mid);
-			else if (opt->state & QStyle::State_MouseOver)
-				fill = opt->palette.brush(QPalette::Midlight);
-			else
-				fill = (opt->state & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
-					: opt->palette.brush(QPalette::Button); 
-		} else
-			fill = opt->palette.brush(QPalette::Window);
+		if (opt->state & QStyle::State_Sunken)
+			fill = opt->palette.brush(QPalette::Mid);
+		else if (opt->state & QStyle::State_MouseOver)
+			fill = opt->palette.brush(QPalette::Midlight);
+		else
+			fill = (opt->state & (QStyle::State_On | QStyle::State_Open)) ? opt->palette.brush(QPalette::Mid)
+				: opt->palette.brush(QPalette::Button); 
 
 		p->setPen(sunken ? cdata->shades[6] : cdata->shades[4]);
 		p->drawLine(r.topLeft(), r.bottomLeft());
@@ -1760,16 +1757,13 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 						(bflags & (QStyle::State_On | QStyle::State_Sunken));
 					QRect br = button;
 
-					if (bflags & QStyle::State_Enabled) {
-						if (bflags & QStyle::State_Sunken)
-							fill = opt->palette.brush(QPalette::Mid);
-						else if (bflags & QStyle::State_MouseOver)
-							fill = opt->palette.brush(QPalette::Midlight);
-						else
-							fill = (bflags & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
-								: opt->palette.brush(QPalette::Button); 
-					} else
-						fill = opt->palette.brush(QPalette::Window);
+					if (bflags & QStyle::State_Sunken)
+						fill = opt->palette.brush(QPalette::Mid);
+					else if (bflags & QStyle::State_MouseOver)
+						fill = opt->palette.brush(QPalette::Midlight);
+					else
+						fill = (bflags & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
+							: opt->palette.brush(QPalette::Button); 
 
 					p->setPen(cdata->shades[6]);
 					p->drawLine(button.topLeft(), button.topRight());
