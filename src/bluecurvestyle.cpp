@@ -1667,10 +1667,10 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			p->drawLine (handle.x() + 1, handle.y() + 2,
 						 handle.x() + 1, handle.bottom() - 2);
 
-			p->setBrush(opt->palette.button().color());
+			//p->setBrush(opt->palette.button().color());
 			QRect fillr (handle);
-			fillr.adjust(2, 2, -2, -2);
-			p->fillRect (fillr, opt->palette.brush(QPalette::Button));
+			fillr.adjust(2, 2, -2, -2);			
+			p->fillRect (fillr, opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button));
 
 			if (sliderOpt->orientation == Qt::Horizontal) {
 				int x1 = handle.x() + handle.width() / 2 - 5;
@@ -2270,6 +2270,25 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 	case CT_SizeGrip: {
 		int size = std::max({ret.width(), ret.height(), 18});
 		ret = QSize(size,size);
+		break;
+	}
+
+	case CT_Slider: {
+		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!slider)
+			break;
+
+		int w = ret.width(), h = ret.height();
+		
+		if (slider->orientation == Qt::Horizontal) {
+			if (h < 17)
+				h = 17;	
+		} else {
+			if (w < 17)
+				w = 17;	
+		}
+
+		ret = QSize(w,h);
 		break;
 	}
 		
