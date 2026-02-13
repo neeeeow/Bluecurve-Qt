@@ -622,7 +622,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_PanelLineEdit: {
-		drawTextRect(p, opt);
+		drawTextRect(p, opt, &opt->palette.base());
 		break;
 	}		
 
