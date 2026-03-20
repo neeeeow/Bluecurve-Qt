@@ -868,10 +868,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			alignment |= Qt::TextHideMnemonic;
 
 		// Move the text bounding rectangle to place the text correctly
-		tr.translate(5, 2);
+		tr.translate(5, 4);
 		drawItemText(p, tr, alignment, opt->palette, opt->state & State_Enabled, tabOpt->text, QPalette::ButtonText);
 		// Now move it back for the focus rectangle (yes, it's a a hack)
-		tr.translate(-2, -2);		
+		tr.translate(-2, -4);		
 		break;
 	}
 
@@ -2124,7 +2124,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	}
 
 	case PM_TabBarTabHSpace: {
-		ret = 10;
+		ret = 11;
 		break;
 	}
 
