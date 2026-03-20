@@ -756,6 +756,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	switch (control) {
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
+		if (!tabOpt) return;
+		
 		bool below = false;
 		QRect tr(r);
 		QRect fr(r);
@@ -809,7 +811,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		} else {
 
-			fr.adjust(1,0,0,2); // ensure tab goes over the tab contents
+			fr.adjust(1,0,0,below ? 0 : 2); // ensure tab goes over the tab contents
 			if (tr.left() != 0) {
 				// selected tab borders move over to the left by 1px
 				tr.adjust(-1,0,0,0);
