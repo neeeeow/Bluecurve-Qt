@@ -15,6 +15,8 @@
 #include <QProgressBar>
 #include <QCheckBox>
 #include <QRadioButton>
+#include <QGuiApplication>
+
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
@@ -28,7 +30,12 @@ const double BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768
 
 static void
 shade (const QColor &ca, QColor &cb, double k) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	float h, s, l;
+#else
+	qreal h, s, l;
+#endif
+	
 	ca.getHslF(&h, &s, &l);
 
 	s *= k;
@@ -877,9 +884,15 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_MenuItem: {
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+		if (!miOpt)
+			break;
 
-		//const QMenu* menu = static_cast<const QMenu*>(widget);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 		int tab = miOpt->reservedShortcutWidth;
+#else
+		int tab = miOpt->tabWidth;
+#endif
+		
 		int maxpmw = miOpt->maxIconWidth;
 
 		if ( miOpt && miOpt->menuItemType == QStyleOptionMenuItem::Separator ) {
@@ -984,12 +997,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			if (! (opt->state & State_Enabled)) {
 				p->setPen(embosscolor);
 				ir.translate(1, 1);
-				p->drawText(ir, alignFlag, text.first(t));
+				p->drawText(ir, alignFlag, text.left(t));
 				ir.translate(-1, -1);
 				p->setPen(textcolor);
 			}
 
-			p->drawText(ir, alignFlag, text.first(t));
+			p->drawText(ir, alignFlag, text.left(t));
 		} // mi->pixmap() is deprecated for a long time now, so ignore it
 
 		if (miOpt->menuItemType == QStyleOptionMenuItem::SubMenu) {

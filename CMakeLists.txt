@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(bluecurve-style LANGUAGES CXX)
+project(bluecurve-style)
 
 set(KF5_MIN_VERSION "5.102.0")
 set(KF6_MIN_VERSION "6.18.0")
@@ -8,36 +8,58 @@ set(KDE_COMPILERSETTINGS_LEVEL "5.82")
 set(QT5_MIN_VERSION "5.15.2")
 set(QT_MIN_VERSION "6.9.0")
 
+include(FeatureSummary)
+
+find_package(ECM ${KF5_MIN_VERSION} REQUIRED NO_MODULE)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ECM_MODULE_PATH}  ${CMAKE_SOURCE_DIR}/cmake)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Needed for Qt installation
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
-# ECM setup
-find_package(ECM ${KF6_MIN_VERSION} REQUIRED NO_MODULE)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ECM_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake)
+include(KDECompilerSettings NO_POLICY_SCOPE)
 
-include(KDEInstallDirs6)
+option(BUILD_QT5 "Build Qt5 style" ON)
+option(BUILD_QT6 "Build with Qt6" ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+function(build_Qt5)
+  set(QT_MAJOR_VERSION 5)
+  include(KDEInstallDirs5)
+  include(KDECMakeSettings)
 
-add_library(bluecurve-style MODULE
-  src/bits.cpp
-  src/bluecurvestyle.cpp
-  src/bluecurvestyle.h
-  src/bluecurvestyleplugin.cpp
-  src/bluecurvestyleplugin.h
-)
+  find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
 
-set_target_properties(bluecurve-style PROPERTIES
-  OUTPUT_NAME bluecurve
-)
+  # Set a unique folder for the qt5 build
+  add_subdirectory(src build-qt5)
 
-target_link_libraries(bluecurve-style
-  Qt6::Widgets
-)
+  unset(QUERY_EXECUTABLE CACHE)
+endfunction()
 
-install(TARGETS bluecurve-style DESTINATION ${KDE_INSTALL_QTPLUGINDIR}/styles/)
+function(build_Qt6)
+  set(QT_MAJOR_VERSION 6)
+  include(KDEInstallDirs6)
+  include(KDECMakeSettings)
+  
+  find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+  
+  # Different binary folder name
+  add_subdirectory(src build-qt6)
+  
+  unset(QUERY_EXECUTABLE CACHE)
+endfunction()
+
+# Build the style
+if(BUILD_QT5)
+  build_Qt5()
+endif()
+
+if(BUILD_QT6)
+  build_Qt6()
+endif()
+
+# Install the color theme
+include(KDEInstallDirs)
 install(FILES Bluecurve.colors DESTINATION ${KDE_INSTALL_DATADIR}/color-schemes/)
+
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
