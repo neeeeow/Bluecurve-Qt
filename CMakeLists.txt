@@ -40,3 +40,4 @@ target_link_libraries(bluecurve-style
 )
 
 install(TARGETS bluecurve-style DESTINATION ${KDE_INSTALL_QTPLUGINDIR}/styles/)
+install(FILES Bluecurve.colors DESTINATION ${KDE_INSTALL_DATADIR}/color-schemes/)
