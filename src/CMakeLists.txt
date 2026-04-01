@@ -1,6 +1,5 @@
 # Set the source files
 add_library(bluecurve-style-qt${QT_MAJOR_VERSION} MODULE
-  bits.cpp
   bluecurvestyle.cpp
   bluecurvestyle.h
   bluecurvestyleplugin.cpp

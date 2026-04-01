@@ -17,14 +17,13 @@
 #include <QRadioButton>
 #include <QGuiApplication>
 
-
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 #define CLAMP_UCHAR(v) ((unsigned char) (CLAMP (((int)v), (int)0, (int)255)))
 
-#include "bits.cpp"
+#include "bits.h"
 
 const double BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768, 0.665, 0.4, 0.205};
 
@@ -85,19 +84,11 @@ colorize_bit (unsigned char *bit,
 	 int x, y;
 	 const unsigned char *src, *asrc;
 	 QRgb *dest;
-	 int dest_rowstride;
-	 int width, height;
-	 unsigned char *dest_pixels;
   
 	 image = new QImage (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
 
 	 if (image == NULL)
 		  return NULL;
-  
-	 dest_rowstride = image->bytesPerLine();
-	 width = image->width();
-	 height = image->height();
-	 dest_pixels = image->bits();
   
 	 for (y = 0; y < RADIO_SIZE; y++)
 	 {
@@ -562,11 +553,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 
 	case PE_IndicatorToolBarHandle: {
 		QString title;
-		if ( p && p->device()->devType() == QInternal::Widget ) {
-			QWidget *w = (QWidget *) p->device();
-			QWidget *p = w->parentWidget();
-		}
-
 		QStyle::State state = opt->state;
 		state |= State_Raised;
 
@@ -799,11 +785,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->setPen(cdata->shades[6]);
 			p->drawRect(tr.adjusted(0,0,-1,-1));
 
-			if (tr.left() == 0)
+			if (tr.left() == 0) {
 				if (below)
 					p->drawPoint(tr.left(), tr.top() - 1);
 				else
 					p->drawPoint(tr.left(), tr.bottom() + 1);
+			}
 
 			p->setPen(opt->palette.light().color());
 			if (!below)
