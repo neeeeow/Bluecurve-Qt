@@ -1830,6 +1830,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			QStyleOptionToolButton newBtn = *toolbutton;
 			newBtn.rect = QRect(ir.right() + 5 - mbi, ir.y() + ir.height() - mbi + 4, mbi - 6, mbi - 6);
 			newBtn.rect = visualRect(toolbutton->direction, button, newBtn.rect);
+			newBtn.rect.adjust(-1,-1,0,0);
 			drawPrimitive(PE_IndicatorArrowDown, &newBtn, p, widget);
 		}
 
