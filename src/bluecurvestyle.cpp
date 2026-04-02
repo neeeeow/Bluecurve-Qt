@@ -2258,7 +2258,7 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 				h = 16;
 			}
 
-			h = std::max({h, opt->fontMetrics.height() + 8, pixelMetric(PM_SmallIconSize) + 6});
+			h = std::max({h, opt->fontMetrics.height() + 10, pixelMetric(PM_SmallIconSize) + 8});
 		}
 
 		// check is at least 16x16
