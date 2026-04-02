@@ -1,3 +1,31 @@
+/*
+  Bluecurve Qt5/6 style.
+
+  Copyright (c) 2025-2026 neeeeow
+  Author: neeeeow (https://github.com/neeeeow/Bluecurve-Qt)
+
+  Based on the Bluecurve Qt3 style:
+  Copyright (c) 2002 Red Hat, Inc.
+  Authors: Bernhard Rosenkränzer <bero@redhat.com>
+           Preston Brown <pbrown@redhat.com>
+           Than Ngo <than@redhat.com>
+           Alexander Larsson <alexl@redhat.com>
+           Chris Lee <clee@redhat.com>
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/  
+
 #include "bluecurvestyle.h"
 
 #include <algorithm>
