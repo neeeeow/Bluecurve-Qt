@@ -8,6 +8,7 @@ add_library(bluecurve-style-qt${QT_MAJOR_VERSION} MODULE
 
 set_target_properties(bluecurve-style-qt${QT_MAJOR_VERSION} PROPERTIES
   OUTPUT_NAME bluecurve
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/qt${QT_MAJOR_VERSION}"
 )
 
 target_link_libraries(bluecurve-style-qt${QT_MAJOR_VERSION}
