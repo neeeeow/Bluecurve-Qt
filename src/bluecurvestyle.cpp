@@ -883,17 +883,15 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		
 		QRect tr = r;
 
-		int alignment = Qt::AlignLeft | Qt::TextShowMnemonic;
+		int alignment = Qt::AlignCenter | Qt::TextShowMnemonic;
 
 		// Qt3 stylehint relied only on the style hint itself, so use nullptr for the other arguments
 		if (!styleHint(SH_UnderlineShortcut, nullptr, nullptr, nullptr))
 			alignment |= Qt::TextHideMnemonic;
 
-		// Move the text bounding rectangle to place the text correctly
-		tr.translate(5, 4);
-		drawItemText(p, tr, alignment, opt->palette, opt->state & State_Enabled, tabOpt->text, QPalette::ButtonText);
-		// Now move it back for the focus rectangle (yes, it's a a hack)
-		tr.translate(-2, -4);		
+		// Adjust the text bounding rectangle
+		tr.translate(-1, -1);
+		drawItemText(p, tr, alignment, opt->palette, opt->state & State_Enabled, tabOpt->text, QPalette::ButtonText);	
 		break;
 	}
 
