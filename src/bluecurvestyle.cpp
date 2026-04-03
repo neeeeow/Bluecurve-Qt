@@ -2158,7 +2158,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	}
 
 	case PM_TabBarTabVSpace: {
-		ret = 10;
+		ret = 13;
 		break;
 	}
 
