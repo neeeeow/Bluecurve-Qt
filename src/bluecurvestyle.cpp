@@ -661,6 +661,34 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;        
 	}		
 
+	case PE_FrameGroupBox: {
+		const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(opt);
+		if (!frame)
+			break;
+
+		if (frame->features & QStyleOptionFrame::Flat) {
+			// If the frame is flat, draw only the top part
+			p->setPen(cdata->shades[3]);
+			p->drawLine(r.x(), r.y(), r.x() + r.width() - 1, r.y());
+			p->setPen(cdata->shades[0]);
+			p->drawLine(r.x(), r.y() + 1, r.x() + r.width() - 1, r.y() + 1);
+			
+		} else {
+			// Dark part
+			p->setPen(cdata->shades[3]);
+			p->drawRect(r.adjusted(0, 0, -2, -2));
+
+			// Light part
+			p->setPen(cdata->shades[0]);
+			p->drawLine(r.x() + 1, r.y() + 1, r.x() + 1, r.y() + r.height() - 3);
+			p->drawLine(r.x() + 2, r.y() + 1, r.x() + r.width() - 3, r.y() + 1);
+			p->drawLine(r.x(), r.y() + r.height() - 1, r.x() + r.width() - 1, r.y() + r.height() - 1);
+			p->drawLine(r.x() + r.width() - 1, r.y(), r.x() + r.width() - 1, r.y() + r.height() - 2);
+		}
+		
+		break;
+	}
+		
 	case PE_Frame:
 	case PE_FrameWindow:
 	case PE_FrameMenu: {
