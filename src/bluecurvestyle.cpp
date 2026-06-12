@@ -457,19 +457,21 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			fill = &opt->palette.brush(QPalette::Mid);
 		else if (opt->state & QStyle::State_MouseOver)
 			fill = &opt->palette.brush(QPalette::Midlight);
-		else
-			fill = (opt->state & QStyle::State_On) ? &opt->palette.brush(QPalette::Mid)
-				: &opt->palette.brush(QPalette::Button); 
+		else if (opt->state & QStyle::State_On)
+			fill = &opt->palette.brush(QPalette::Mid);
+		else { // flat buttons should never be filled in
+			const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+			fill = (button && (button->features & QStyleOptionButton::Flat)) ? 0 : &opt->palette.brush(QPalette::Button);
+		}
 
-		drawLightBevel(p, opt, fill, true);
+		if (fill) // buttons with no fill should have no border
+			drawLightBevel(p, opt, fill, true);
 
-		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
-		if (!button)
-			break;
-
-		if (button->features & QStyleOptionButton::DefaultButton) {
-			p->setPen(Qt::black);
-			p->drawRect(r.adjusted(0,0,-1,-1));
+		if (const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt)) {
+			if (button->features & QStyleOptionButton::DefaultButton) {
+				p->setPen(Qt::black);
+				p->drawRect(r.adjusted(0,0,-1,-1));
+			}
 		}
 		
 		break;
@@ -785,7 +787,26 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
 		
 		break;
-		}		
+	}
+
+	case PE_IndicatorTabClose: {
+		// Set button options
+		QStyleOptionButton button;
+		button.rect = opt->rect;
+		button.state = opt->state;
+		button.palette = opt->palette;
+		button.features = QStyleOptionButton::Flat;
+
+		// Draw the button
+		drawPrimitive(PE_PanelButtonTool, &button, p, widget);
+
+		// Draw icon
+		const int iconWidth(pixelMetric(QStyle::PM_SmallIconSize, opt, widget));
+		const QPixmap pixmap = QIcon::fromTheme(QStringLiteral("tab-close")).pixmap(iconWidth, iconWidth);
+	    drawItemPixmap(p, button.rect, Qt::AlignCenter, pixmap);
+		
+		break;
+	}
 		
 	default: {
 		QCommonStyle::drawPrimitive(pe, opt, p, widget);
@@ -903,23 +924,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}		
 
 		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : cdata->shades[2]));
-		break;
-	}
-
-	case CE_TabBarTabLabel: {
-		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
-		
-		QRect tr = r;
-
-		int alignment = Qt::AlignCenter | Qt::TextShowMnemonic;
-
-		// Qt3 stylehint relied only on the style hint itself, so use nullptr for the other arguments
-		if (!styleHint(SH_UnderlineShortcut, nullptr, nullptr, nullptr))
-			alignment |= Qt::TextHideMnemonic;
-
-		// Adjust the text bounding rectangle
-		tr.translate(-1, -1);
-		drawItemText(p, tr, alignment, opt->palette, opt->state & State_Enabled, tabOpt->text, QPalette::ButtonText);	
 		break;
 	}
 
