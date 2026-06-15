@@ -1431,6 +1431,15 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		
 		break;
 	}
+
+	case CE_ToolBar: {		
+		p->fillRect(r, opt->palette.button());
+		p->setPen(cdata->shades[0]);
+		p->drawLine(r.left(), r.top(), r.right(), r.top());
+		p->setPen(cdata->shades[3]);
+		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+		break;
+	}
 		
 	default: {
 		QCommonStyle::drawControl(control, opt, p, widget);
