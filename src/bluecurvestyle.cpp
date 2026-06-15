@@ -595,7 +595,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			for (int i = 0; i < nLines; yy += 5, i++) {
 				p->setPen(cdata->shades[5]);
 				p->drawLine(1, yy + 3, 4, yy);
-				p->setPen(opt->palette.light().color());
+				p->setPen(Qt::white);
 				p->drawLine(1, yy + 4, 4, yy + 1);
 			}			
 		} else {
@@ -608,7 +608,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 				p->setPen(cdata->shades[5]);
 				p->drawLine(xx + 3, 1,
 							xx, 1 + 3);
-				p->setPen(opt->palette.light().color());
+				p->setPen(Qt::white);
 				p->drawLine(xx + 3, 2,
 							xx + 1, 1 + 3);
 			}
@@ -710,7 +710,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_FrameDockWidget:
 	case PE_PanelMenuBar: {
 		p->fillRect(r, opt->palette.button().color());
-		p->setPen(opt->palette.mid().color());
+		p->setPen(cdata->shades[3]);
 		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
 		break;
 	}
@@ -786,6 +786,14 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		else
 			drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
 		
+		break;
+	}
+
+	case PE_PanelStatusBar: {
+		p->setPen(cdata->shades[3]);
+		p->drawLine(r.left(), r.top(), r.right(), r.top());
+		p->setPen(cdata->shades[0]);
+	    p->drawLine(r.left(), r.top()+1, r.right(), r.top()+1);
 		break;
 	}
 
