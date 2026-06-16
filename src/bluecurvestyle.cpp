@@ -2397,7 +2397,8 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 	case SH_Menu_MouseTracking:
 	case SH_MenuBar_MouseTracking:
 	case SH_ComboBox_ListMouseTracking:
-	case SH_UnderlineShortcut: {
+	case SH_UnderlineShortcut:
+	case SH_ToolBar_Movable: {
 		ret = 1;
 		break;
 	}
