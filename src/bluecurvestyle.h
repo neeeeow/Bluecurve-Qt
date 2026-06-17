@@ -3,6 +3,7 @@
 #include <QCommonStyle>
 #include <QCache>
 #include <QPainter>
+#include <QStyleOptionTab>
 
 class BluecurveStyle : public QCommonStyle
 {
@@ -82,6 +83,9 @@ private:
 	void drawGradientBox(QPainter *p, QRect const &r, const QPalette &palette,
 						 const BluecurveColorData *cdata, bool horiz,
 						 double shade1, double shade2) const;
+
+	void tabLayout(const QStyleOptionTab *opt, const QWidget *widget,
+				   QRect *textRect, QRect *iconRect) const; 
 
 	static void calculate_arrow_geometry(PrimitiveElement pe, int &x, int &y,
 								  int &width, int &height);

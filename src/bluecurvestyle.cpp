@@ -1109,6 +1109,76 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
+	case CE_TabBarTabLabel: {
+		const QStyleOptionTab *tab = qstyleoption_cast<const QStyleOptionTab *>(opt);
+		if (!tab)
+			break;
+
+		QRect tr = tab->rect;
+		bool verticalTabs = tab->shape == QTabBar::RoundedEast
+			|| tab->shape == QTabBar::RoundedWest
+			|| tab->shape == QTabBar::TriangularEast
+			|| tab->shape == QTabBar::TriangularWest;
+
+		int alignment = Qt::AlignCenter | Qt::TextShowMnemonic;
+		if (!styleHint(SH_UnderlineShortcut, opt, widget))
+			alignment |= Qt::TextHideMnemonic;
+
+		if (verticalTabs) {
+			p->save();
+			int newX, newY, newRot;
+			if (tab->shape == QTabBar::RoundedEast || tab->shape == QTabBar::TriangularEast) {
+				newX = tr.width() + tr.x();
+				newY = tr.y();
+				newRot = 90;
+			} else {
+				newX = tr.x();
+				newY = tr.y() + tr.height();
+				newRot = -90;
+			}
+			QTransform m = QTransform::fromTranslate(newX, newY);
+			m.rotate(newRot);
+			p->setTransform(m, true);
+		}
+		QRect iconRect;
+		tabLayout(tab, widget, &tr, &iconRect);
+		tr = proxy()->subElementRect(SE_TabBarTabText, opt, widget); //we compute tr twice because the style may override subElementRect
+
+		if (!tab->icon.isNull()) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)			
+			QPixmap tabIcon = tab->icon.pixmap(tab->iconSize, getDpr(p), QIcon::Normal,
+											   (tab->state & State_Selected) ? QIcon::On : QIcon::Off);
+#else
+			QPixmap tabIcon = tab->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr, tab->iconSize, QIcon::Normal,
+											   (tab->state & State_Selected) ? QIcon::On : QIcon::Off);
+#endif
+			if (!(tab->state & State_Enabled))
+				tabIcon = pixmap_saturate_and_pixelate(tabIcon, 0.8, true);			
+			p->drawPixmap(iconRect.x(), iconRect.y(), tabIcon);
+		}
+
+		proxy()->drawItemText(p, tr, alignment, tab->palette, tab->state & State_Enabled, tab->text,
+							  widget ? widget->foregroundRole() : QPalette::WindowText);
+		if (verticalTabs)
+			p->restore();
+
+		if (tab->state & State_HasFocus) {
+			const int OFFSET = 1 + pixelMetric(PM_DefaultFrameWidth);
+
+			int x1, x2;
+			x1 = tab->rect.left();
+			x2 = tab->rect.right() - 1;
+
+			QStyleOptionFocusRect fropt;
+			fropt.QStyleOption::operator=(*tab);
+			fropt.rect.setRect(x1 + 1 + OFFSET, tab->rect.y() + OFFSET,
+							   x2 - x1 - 2*OFFSET, tab->rect.height() - 2*OFFSET);
+			drawPrimitive(PE_FrameFocusRect, &fropt, p, widget);
+		}
+		
+		break;
+	}
+
 	case CE_MenuItem: {
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
 		if (!miOpt)
@@ -2411,6 +2481,11 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		break;
 	}
 
+	case PM_TabBarTabShiftVertical: {
+		ret = 0;
+		break;
+	}
+
 	case PM_ProgressBarChunkWidth: {
 		ret = 2;
 		break;
@@ -2683,6 +2758,71 @@ BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
 	p->setPen(cdata->spots[0]);
 	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
 	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
+}
+
+void
+BluecurveStyle::tabLayout(const QStyleOptionTab *opt, const QWidget *widget,
+						  QRect *textRect, QRect *iconRect) const
+{
+	Q_ASSERT(textRect);
+	Q_ASSERT(iconRect);
+	QRect tr = opt->rect;
+	bool verticalTabs = opt->shape == QTabBar::RoundedEast
+		|| opt->shape == QTabBar::RoundedWest
+		|| opt->shape == QTabBar::TriangularEast
+		|| opt->shape == QTabBar::TriangularWest;
+	if (verticalTabs)
+		tr.setRect(0, 0, tr.height(), tr.width()); // 0, 0 as we will have a translate transform
+
+	int verticalShift = pixelMetric(QStyle::PM_TabBarTabShiftVertical, opt, widget);
+	int horizontalShift = pixelMetric(QStyle::PM_TabBarTabShiftHorizontal, opt, widget);
+	int hpadding = pixelMetric(QStyle::PM_TabBarTabHSpace, opt, widget) / 2;
+	int vpadding = pixelMetric(QStyle::PM_TabBarTabVSpace, opt, widget) / 2;
+	if (opt->shape == QTabBar::RoundedSouth || opt->shape == QTabBar::TriangularSouth)
+		verticalShift = -verticalShift;
+	tr.adjust(hpadding, verticalShift + vpadding, horizontalShift - hpadding, -vpadding);
+	bool selected = opt->state & QStyle::State_Selected;
+	if (selected) {
+		tr.setTop(tr.top() - verticalShift);
+		tr.setRight(tr.right() - horizontalShift);
+	}
+
+    // left widget
+	if (!opt->leftButtonSize.isEmpty()) {
+		tr.setLeft(tr.left() + 4 +
+				   (verticalTabs ? opt->leftButtonSize.height() : opt->leftButtonSize.width()));
+	}
+    // right widget
+	if (!opt->rightButtonSize.isEmpty()) {
+		tr.setRight(tr.right() - 4 -
+					(verticalTabs ? opt->rightButtonSize.height() : opt->rightButtonSize.width()));
+	}
+
+    // icon
+	if (!opt->icon.isNull()) {
+		QSize iconSize = opt->iconSize;
+		if (!iconSize.isValid()) {
+			int iconExtent = pixelMetric(QStyle::PM_SmallIconSize, opt, widget);
+			iconSize = QSize(iconExtent, iconExtent);
+        }
+		QSize tabIconSize = opt->icon.actualSize(iconSize,
+												 QIcon::Normal, // We always use QIcon::Normal always here for our style
+												 (opt->state & QStyle::State_Selected) ? QIcon::On : QIcon::Off);
+        // High-dpi icons do not need adjustment; make sure tabIconSize is not larger than iconSize
+		tabIconSize = QSize(qMin(tabIconSize.width(), iconSize.width()), qMin(tabIconSize.height(), iconSize.height()));
+
+		const int offsetX = (iconSize.width() - tabIconSize.width()) / 2;
+		*iconRect = QRect(tr.left() + offsetX, tr.center().y() - tabIconSize.height() / 2,
+						  tabIconSize.width(), tabIconSize.height());
+		if (!verticalTabs)
+			*iconRect = QStyle::visualRect(opt->direction, opt->rect, *iconRect);
+		tr.setLeft(tr.left() + tabIconSize.width() + 4);
+	}
+
+	if (!verticalTabs)
+		tr = QStyle::visualRect(opt->direction, opt->rect, tr);
+
+	*textRect = tr;
 }
 
 /* Arrow drawing logic taken from Bluecurve GTK+ 2.0 engine
