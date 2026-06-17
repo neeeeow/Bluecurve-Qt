@@ -2,6 +2,7 @@
 
 #include <QCommonStyle>
 #include <QCache>
+#include <QPainter>
 
 class BluecurveStyle : public QCommonStyle
 {
@@ -82,16 +83,29 @@ private:
 						 const BluecurveColorData *cdata, bool horiz,
 						 double shade1, double shade2) const;
 
-	void calculate_arrow_geometry(PrimitiveElement pe, int &x, int &y,
-								  int &width, int &height) const;
+	static void calculate_arrow_geometry(PrimitiveElement pe, int &x, int &y,
+								  int &width, int &height);
 
-	void drawArrow(QPainter *p, PrimitiveElement pe, int x,
-				   int y, int width, int height) const;
+	static void drawArrow(QPainter *p, PrimitiveElement pe, int x,
+				   int y, int width, int height);
 
-	void arrow_draw_hline(QPainter *p, int x1, int x2,
-						  int y, bool last) const;
+	static void arrow_draw_hline(QPainter *p, int x1, int x2,
+						  int y, bool last);
 
-	void arrow_draw_vline(QPainter *p, int y1, int y2,
-						  int x, bool last) const;
+	static void arrow_draw_vline(QPainter *p, int y1, int y2,
+						  int x, bool last);
+
+	static QPixmap pixmap_saturate_and_pixelate(const QPixmap &src,
+												qreal saturation,
+												bool pixelate);
+
+	static inline qreal getDpr(const QPainter *p)
+		{		
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			return p->device() ? p->device()->devicePixelRatio() : 1.0;
+#else
+			return p->device() ? p->device()->devicePixelRatioF() : 1.0;
+#endif
+		}
 	
 };

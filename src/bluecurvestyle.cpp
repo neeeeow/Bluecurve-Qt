@@ -31,7 +31,6 @@
 #include <algorithm>
 
 #include <QStyleFactory>
-#include <QPainter>
 #include <QStyleOption>
 #include <QPushButton>
 #include <QPointer>
@@ -47,6 +46,7 @@
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
+#define DARK_FACTOR 0.7
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 #define CLAMP_UCHAR(v) ((unsigned char) (CLAMP (((int)v), (int)0, (int)255)))
@@ -832,6 +832,180 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
+		/* CE_PushButtonLabel and CE_ToolButtonLabel adapted from QCommonStyle */
+	case CE_PushButtonLabel: {
+		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+		if (!button)
+			break;
+		
+		QRect textRect = button->rect;
+		int tf = Qt::AlignVCenter | Qt::TextShowMnemonic;
+		if (!proxy()->styleHint(SH_UnderlineShortcut, button, widget))
+			tf |= Qt::TextHideMnemonic;
+
+		if (button->features & QStyleOptionButton::HasMenu) {
+			int indicatorSize = pixelMetric(PM_MenuButtonIndicator, button, widget);
+			if (button->direction == Qt::LeftToRight)
+				textRect = textRect.adjusted(0, 0, -indicatorSize, 0);
+			else
+				textRect = textRect.adjusted(indicatorSize, 0, 0, 0);
+		}
+
+		if (!button->icon.isNull()) {
+			QIcon::Mode mode = QIcon::Normal; // Always use normal mode, per GTK 2 behaviour
+			QIcon::State state = (button->state & State_On) ? QIcon::On : QIcon::Off;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			QPixmap pixmap = button->icon.pixmap(button->iconSize, getDpr(p), mode, state);
+#else
+			QPixmap pixmap = button->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr, button->iconSize, mode, state);
+#endif
+			if (!(button->state & State_Enabled))
+				pixmap = pixmap_saturate_and_pixelate(pixmap, 0.8, true);
+
+			int pixmapWidth = pixmap.width() / pixmap.devicePixelRatio();
+			int pixmapHeight = pixmap.height() / pixmap.devicePixelRatio();
+			int labelWidth = pixmapWidth;
+			int labelHeight = pixmapHeight;
+			int iconSpacing = 4;//### 4 is currently hardcoded in QPushButton::sizeHint()
+			if (!button->text.isEmpty()) {
+				int textWidth = button->fontMetrics.boundingRect(opt->rect, tf, button->text).width();
+				labelWidth += (textWidth + iconSpacing);
+			}
+
+			QRect iconRect = QRect(textRect.x() + (textRect.width() - labelWidth) / 2,
+								   textRect.y() + (textRect.height() - labelHeight) / 2,
+								   pixmapWidth, pixmapHeight);
+
+			iconRect = visualRect(button->direction, textRect, iconRect);
+
+			if (button->direction == Qt::RightToLeft)
+				textRect.setRight(iconRect.left() - iconSpacing / 2);
+			else
+				textRect.setLeft(iconRect.left() + iconRect.width() + iconSpacing / 2);
+
+			// qt_format_text reverses again when  painter->layoutDirection is also RightToLeft
+			if (p->layoutDirection() == button->direction)
+				tf |= Qt::AlignLeft;
+			else
+				tf |= Qt::AlignRight;
+
+			p->drawPixmap(iconRect, pixmap);
+			
+		} else {
+			tf |= Qt::AlignHCenter;
+		}
+
+		drawItemText(p, textRect, tf, button->palette, (button->state & State_Enabled),
+					 button->text, QPalette::ButtonText);
+		
+		break;
+	}
+		
+	case CE_ToolButtonLabel: {
+		const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+		if (!toolbutton)
+			break;
+
+		QRect rect = toolbutton->rect;
+
+		bool hasArrow = toolbutton->features & QStyleOptionToolButton::Arrow;
+		if (((!hasArrow && toolbutton->icon.isNull()) && !toolbutton->text.isEmpty())
+			|| toolbutton->toolButtonStyle == Qt::ToolButtonTextOnly) {
+			int alignment = Qt::AlignCenter | Qt::TextShowMnemonic;
+			if (!proxy()->styleHint(SH_UnderlineShortcut, opt, widget))
+				alignment |= Qt::TextHideMnemonic;
+			p->setFont(toolbutton->font);
+			drawItemText(p, rect, alignment, toolbutton->palette,
+						 opt->state & State_Enabled, toolbutton->text,
+						 QPalette::ButtonText);
+		} else {
+
+			auto drawToolArrow = [this, toolbutton, p, widget](const QRect &rect) {
+				PrimitiveElement pe;
+				switch (toolbutton->arrowType) {
+				case Qt::LeftArrow:
+					pe = PE_IndicatorArrowLeft;
+					break;
+				case Qt::RightArrow:
+					pe = PE_IndicatorArrowRight;
+					break;
+				case Qt::UpArrow:
+					pe = PE_IndicatorArrowUp;
+					break;
+				case Qt::DownArrow:
+					pe = PE_IndicatorArrowDown;
+					break;
+				default:
+					return;
+				}
+				QStyleOption arrowOpt = *toolbutton;
+				arrowOpt.rect = rect;
+				drawPrimitive(pe, &arrowOpt, p, widget);				
+			};
+			
+			QPixmap pm;
+			QSize pmSize = toolbutton->iconSize;
+			if (!toolbutton->icon.isNull()) {
+				QIcon::State state = toolbutton->state & State_On ? QIcon::On : QIcon::Off;
+				QIcon::Mode mode = QIcon::Normal;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			    pm = toolbutton->icon.pixmap(toolbutton->rect.size().boundedTo(toolbutton->iconSize),
+											 getDpr(p), mode, state);
+#else
+				pm = toolbutton->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
+											 toolbutton->rect.size().boundedTo(toolbutton->iconSize),
+											 mode, state);
+#endif
+				if (!(toolbutton->state & State_Enabled))
+					pm = pixmap_saturate_and_pixelate(pm, 0.8, true);
+
+				pmSize = pm.size() / pm.devicePixelRatio();
+			}
+
+			if (toolbutton->toolButtonStyle != Qt::ToolButtonIconOnly) {
+				p->setFont(toolbutton->font);
+				QRect pr = rect,
+                    tr = rect;
+				int alignment = Qt::TextShowMnemonic;
+				if (!proxy()->styleHint(SH_UnderlineShortcut, opt, widget))
+					alignment |= Qt::TextHideMnemonic;
+
+				if (toolbutton->toolButtonStyle == Qt::ToolButtonTextUnderIcon) {
+					pr.setHeight(pmSize.height() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
+					tr.adjust(0, pr.height() - 1, 0, -1);
+					if (!hasArrow) {
+					    drawItemPixmap(p, pr, Qt::AlignCenter, pm);
+					} else {
+						drawToolArrow(pr);
+					}
+					alignment |= Qt::AlignCenter;					
+				} else {
+					pr.setWidth(pmSize.width() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
+					tr.adjust(pr.width(), 0, 0, 0);
+					if (!hasArrow) {
+						drawItemPixmap(p, QStyle::visualRect(opt->direction, rect, pr), Qt::AlignCenter, pm);
+					} else {
+						drawToolArrow(pr);
+					}
+					alignment |= Qt::AlignLeft | Qt::AlignVCenter;
+				}
+				drawItemText(p, QStyle::visualRect(opt->direction, rect, tr), alignment, toolbutton->palette,
+							 toolbutton->state & State_Enabled, toolbutton->text,
+							 QPalette::ButtonText);
+			} else {
+				if (hasArrow) {
+					drawToolArrow(rect);
+				} else {
+				    drawItemPixmap(p, rect, Qt::AlignCenter, pm);
+				}
+			}
+		}
+		
+		break;
+	}
+		
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
 		if (!tabOpt) return;
@@ -2501,7 +2675,7 @@ BluecurveStyle::calculate_arrow_geometry(PrimitiveElement pe,
 										 int &x,
 										 int &y,
 										 int &width,
-										 int &height) const
+										 int &height)
 {
 	int w = width;
 	int h = height;
@@ -2570,7 +2744,7 @@ BluecurveStyle::drawArrow(QPainter *p,
 						  int x,
 						  int y,
 						  int width,
-						  int height) const
+						  int height)
 {
 	int i, j;
 	
@@ -2610,7 +2784,7 @@ BluecurveStyle::arrow_draw_hline(QPainter *p,
 								 int x1,
 								 int x2,
 								 int y,
-								 bool last) const
+								 bool last)
 {
 	if (x2 - x1 < 7 && !last)
 		p->drawLine(x1, y, x2, y);
@@ -2636,7 +2810,7 @@ BluecurveStyle::arrow_draw_vline(QPainter *p,
 								 int y1,
 								 int y2,
 								 int x,
-								 bool last) const
+								 bool last)
 {
 	if (y2 - y1 < 7 && !last)
 		p->drawLine(x, y1, x, y2);
@@ -2648,4 +2822,61 @@ BluecurveStyle::arrow_draw_vline(QPainter *p,
 		p->drawLine(x, y1, x, y1+2);
 		p->drawLine(x, y2-2, x, y2);
     }
+}
+
+/* Adapted from GDK source */
+
+QPixmap
+BluecurveStyle::pixmap_saturate_and_pixelate(const QPixmap &src,
+											 qreal saturation,
+											 bool pixelate)
+{
+	if (saturation == 1.0 && !pixelate)
+		return src;
+
+	// Convert pixmaps to images
+	QImage src_img(src.toImage());
+	QImage dest_img(src_img);
+
+	// Convert to Format_ARGB32, to make manipulation easier
+	src_img.convertTo(QImage::Format_ARGB32);
+	dest_img.convertTo(QImage::Format_ARGB32);
+
+	int width = src_img.width();
+	int height = src_img.height();
+	
+	for (int i = 0; i < height; i++) {
+		// best practice to cast to QRgb, per Qt documentation
+	    const QRgb *src_line = reinterpret_cast<const QRgb *>(src_img.constScanLine(i));
+	    QRgb *dest_line = reinterpret_cast<QRgb *>(dest_img.scanLine(i));
+
+		for (int j = 0; j < width; j++) {
+			QRgb src_pixel = src_line[j];
+			int dest_r, dest_g, dest_b, dest_a; // dest QRgb values
+			
+			int intensity = (int)(qRed(src_pixel) * 0.3 + qGreen(src_pixel) * 0.59 + qBlue(src_pixel) * 0.11);
+			auto saturate = [saturation, intensity](int v) {
+				return (1.0 - saturation) * intensity + saturation * v;
+			};
+
+			if (pixelate && (i + j) % 2 == 0) {
+				dest_r = intensity / 2 + 127;
+				dest_g = intensity / 2 + 127;
+				dest_b = intensity / 2 + 127;
+			} else if (pixelate) {
+				dest_r = qBound(0, (int)(saturate(qRed(src_pixel)) * DARK_FACTOR), 255);
+				dest_g = qBound(0, (int)(saturate(qGreen(src_pixel)) * DARK_FACTOR), 255);
+				dest_b = qBound(0, (int)(saturate(qBlue(src_pixel)) * DARK_FACTOR), 255);
+			} else {
+				dest_r = qBound(0, (int)saturate(qRed(src_pixel)), 255);
+				dest_g = qBound(0, (int)saturate(qGreen(src_pixel)), 255);
+				dest_b = qBound(0, (int)saturate(qBlue(src_pixel)), 255);
+			}
+
+			dest_a = qAlpha(src_pixel);
+			dest_line[j] = qRgba(dest_r, dest_b, dest_g, dest_a);
+		}
+	}
+	
+	return QPixmap::fromImage(dest_img);
 }
