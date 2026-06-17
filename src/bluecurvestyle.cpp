@@ -1122,6 +1122,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		
 		int maxpmw = miOpt->maxIconWidth;
 
+		bool checked = miOpt->checkType != QStyleOptionMenuItem::NotCheckable
+			? miOpt->checked : false;
+
 		if ( miOpt && miOpt->menuItemType == QStyleOptionMenuItem::Separator ) {
 			// draw separator
 			p->fillRect(r, opt->palette.brush(QPalette::Button));
@@ -1159,20 +1162,38 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 
 		if (!miOpt->icon.isNull()) {
-			QIcon::Mode mode =
-				(opt->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled;
-			if ((opt->state & State_Selected) && (opt->state & State_Enabled))
-				mode = QIcon::Active;
+			if (checked) {
+				// If the menu item is checked and there is an icon, give the icon
+				// a sunken appearance
+				QStyleOption buttonOpt;
+				buttonOpt.rect = cr;
+				buttonOpt.state = opt->state | QStyle::State_On;
+				buttonOpt.state &= ~QStyle::State_Sunken;
+				if ((opt->state & State_Selected) && (opt->state & State_Enabled))
+					buttonOpt.state |= QStyle::State_MouseOver;
+				buttonOpt.palette = opt->palette;
+				drawPrimitive(PE_PanelButtonCommand, &buttonOpt, p, widget);
+			}
+			
+			// Draw the icon
+			const QIcon::Mode mode = QIcon::Normal;
+			const QSize size = QSize(pixelMetric(PM_SmallIconSize, opt, widget), pixelMetric(PM_SmallIconSize, opt, widget));
+		    const QIcon::State state = checked ? QIcon::On : QIcon::Off;
 			QPixmap pixmap;
-			if (miOpt->menuHasCheckableItems && miOpt->checked)
-			    pixmap = miOpt->icon.pixmap(pixelMetric(PM_SmallIconSize), mode, QIcon::On);
-			else
-				pixmap = miOpt->icon.pixmap(pixelMetric(PM_SmallIconSize), mode);
-			QRect pmr(QPoint(0, 0), pixmap.size());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+			pixmap = miOpt->icon.pixmap(size, getDpr(p), mode, state);
+#else
+			pixmap = miOpt->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
+										size, mode, state);
+#endif
+			if (!(opt->state & State_Enabled))
+				pixmap = pixmap_saturate_and_pixelate(pixmap, 0.8, true);
+
+			QRect pmr(QPoint(0, 0), pixmap.size() / pixmap.devicePixelRatio());
 			pmr.moveCenter(cr.center());
 			p->setPen(opt->palette.text().color());
 			p->drawPixmap(pmr.topLeft(), pixmap);
-		} else if (miOpt->menuHasCheckableItems && miOpt->checked) {
+		} else if (checked) {
 			QStyleOption checkOpt;
 			checkOpt.state = (opt->state & (State_Enabled|State_Selected)) | State_On;
 			checkOpt.rect = cr;
@@ -1195,9 +1216,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		} else
 			textcolor = embosscolor = opt->palette.buttonText().color();			
 		p->setPen(textcolor);
-
-		// mi->custom() no longer exists in Qt6, I don't believe there to be a modern equivalent
-		// but if there is one, I will add the code here, in line with the Qt3 theme.
 
 		QString text = miOpt->text;
 		if (! text.isNull()) {
