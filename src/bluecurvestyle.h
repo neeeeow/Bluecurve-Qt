@@ -80,7 +80,7 @@ private:
 	void drawGradient(QPainter *p, QRect const &rect, const QPalette &palette,
 					  double shade1, double shade2, bool horiz) const;
 
-	void drawGradientBox(QPainter *p, QRect const &r, const QPalette &palette,
+	void drawGradientBox(QPainter *p, const QStyleOption *opt,
 						 const BluecurveColorData *cdata, bool horiz,
 						 double shade1, double shade2) const;
 
@@ -110,6 +110,13 @@ private:
 #else
 			return p->device() ? p->device()->devicePixelRatioF() : 1.0;
 #endif
+		}
+
+
+	// Scales a QRect for drawing pixel-perfect lines on HiDPI displays
+	static inline QRect getScaledRect(const QRect &rect, const qreal dpr)
+		{
+			return QRect(qRound(rect.x() * dpr), qRound(rect.y() * dpr), rect.width() * dpr, rect.height() * dpr);
 		}
 	
 };

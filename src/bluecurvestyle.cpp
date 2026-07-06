@@ -358,7 +358,20 @@ void
 BluecurveStyle::drawTextRect(QPainter *p, const QStyleOption *opt,
 							 const QBrush *fill) const
 {
-	const QRect &r = opt->rect;
+	p->save();
+	const qreal dpr = getDpr(p);
+	QRect r;
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		const qreal inverseScale = qreal(1) / dpr;
+		p->scale(inverseScale, inverseScale);
+		p->translate(0.5, 0.5);
+		isScaled = true;
+		r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
+	
 	QRect br = r;
 
 	const BluecurveColorData *cdata = lookupData(opt->palette);
@@ -383,15 +396,32 @@ BluecurveStyle::drawTextRect(QPainter *p, const QStyleOption *opt,
 
 	// fill
 	if (fill) {
+		if (isScaled)
+			p->translate(-0.5, -0.5);
 		p->fillRect(br, *fill);
 	}
+	p->restore();
 }
 
 void
 BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 							   const QBrush *fill, bool dark) const
 {
-	const QRect &r = opt->rect;
+	p->save();
+	const qreal dpr = getDpr(p);
+	QRect r;
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		const qreal inverseScale = qreal(1) / dpr;
+		p->scale(inverseScale, inverseScale);
+		p->translate(0.5, 0.5);
+		isScaled = true;
+	    r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
+	
+	//const QRect &r = opt->rect;
 	QRect br = r;
 	QColor col;
 
@@ -424,8 +454,11 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 
 	// fill
 	if (fill) {
+		if (isScaled)
+			p->translate(-0.5, -0.5);		
 		p->fillRect(br, *fill);
 	}
+	p->restore();
 }
 
 void
@@ -433,8 +466,16 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 							  QPainter *p, const QWidget *widget) const
 {
 
-	// this isn't necessary, but it cleans up the code, and makes copy/pasting in Qt3 code easier...
-	const QRect &r = opt->rect;
+	const qreal dpr = getDpr(p);
+	const qreal inverseScale = qreal(1) / dpr;
+	QRect r; // Drawing rectangle for elements which must not be scaled
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		isScaled = true;
+	    r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
 
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
@@ -469,8 +510,14 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 
 		if (const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt)) {
 			if (button->features & QStyleOptionButton::DefaultButton) {
+				p->save();
+				if (isScaled) {
+					p->scale(inverseScale, inverseScale);
+					p->translate(0.5, 0.5);
+				}				
 				p->setPen(Qt::black);
 				p->drawRect(r.adjusted(0,0,-1,-1));
+				p->restore();
 			}
 		}
 		
@@ -478,6 +525,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_IndicatorButtonDropDown: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		QBrush fill;
 		bool sunken =
 			(opt->state & (QStyle::State_On | QStyle::State_Sunken));
@@ -518,8 +571,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			br.adjust(1, 1, -1, -1);
 		}
 
+		if (isScaled)
+			p->translate(-0.5, -0.5);
+
 		// fill
 		p->fillRect(br, fill);
+
+		p->restore();
 		
 		break;
 	}
@@ -531,13 +589,24 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_FrameDefaultButton: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 		p->setPen(opt->palette.shadow().color());
 		p->setBrush(Qt::NoBrush);
 		p->drawRect(r.adjusted(0,0,-1,-1));
+		p->restore();
 		break;
 	}
 
 	case PE_IndicatorMenuCheckMark: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
 		if (opt->state & State_Selected)
@@ -545,6 +614,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		else
 			p->drawPixmap(qp, *(cdata->checkMark[1]));
 
+		p->restore();
 		break;		
 	}
 
@@ -558,7 +628,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		else if (opt->state & State_NoChange)
 			pix += 2;
 
-		p->drawPixmap(r.topLeft(), *cdata->checkPix[pix]);
+		p->drawPixmap(opt->rect.topLeft(), *cdata->checkPix[pix]);
 		break;
 	}
 
@@ -576,12 +646,17 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (opt->state & State_On)
 			pix += 1;
 		
-		p->drawPixmap(r.topLeft(), *cdata->radioPix[pix]);
+		p->drawPixmap(opt->rect.topLeft(), *cdata->radioPix[pix]);
 		
 		break;			
 	}
 
 	case PE_IndicatorToolBarHandle: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 		QString title;
 		QStyle::State state = opt->state;
 		state |= State_Raised;
@@ -614,11 +689,18 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			}
 		}
 
+		p->restore();
+
 		break;
 	}
 
 	case PE_IndicatorToolBarSeparator: {
 		if (r.width() > 20 || r.height() > 20) {
+			p->save();
+			if (isScaled) {
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			}
 			if (opt->state & State_Horizontal) {
 				p->setPen(cdata->shades[5]);
 				p->drawLine(r.left() + 1, r.top() + 6, r.left() + 1, r.bottom() - 6);
@@ -630,9 +712,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 				p->setPen(cdata->shades[3]);
 				p->drawLine(r.left() + 6, r.top() + 2, r.right() - 6, r.top() + 2);
 			}
+			p->restore();
 		} else {
 		    QCommonStyle::drawPrimitive(pe, opt, p, widget);
 		}
+
 		break;		
 	}
 
@@ -650,6 +734,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}		
 
 	case PE_FrameTabWidget: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 		p->setPen(cdata->shades[6]);
 		p->drawLine(r.left(),r.top(),r.left(),r.bottom());
 		p->drawLine(r.left(),r.bottom(),r.right(),r.bottom());
@@ -660,6 +749,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		p->drawLine(r.left()+1,r.bottom()-1,r.right()-1,r.bottom()-1);
 		p->drawLine(r.right()-1,r.bottom()-1,r.right()-1,r.top()+1);
 		p->drawLine(r.left(),r.top()+1,r.right()-1,r.top()+1);
+		p->restore();
 		break;        
 	}		
 
@@ -667,6 +757,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(opt);
 		if (!frame)
 			break;
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 
 		if (frame->features & QStyleOptionFrame::Flat) {
 			// If the frame is flat, draw only the top part
@@ -687,6 +783,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			p->drawLine(r.x(), r.y() + r.height() - 1, r.x() + r.width() - 1, r.y() + r.height() - 1);
 			p->drawLine(r.x() + r.width() - 1, r.y(), r.x() + r.width() - 1, r.y() + r.height() - 2);
 		}
+
+		p->restore();
 		
 		break;
 	}
@@ -703,19 +801,36 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_PanelMenu: {
-		p->fillRect(r, opt->palette.window().color());
+		p->fillRect(opt->rect, opt->palette.window().color());
 		break;
 	}
 
 	case PE_FrameDockWidget:
 	case PE_PanelMenuBar: {
-		p->fillRect(r, opt->palette.button().color());
+		p->fillRect(opt->rect, opt->palette.button().color());
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setPen(cdata->shades[3]);
 		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+
+		p->restore();
+		
 		break;
 	}
 
 	case PE_FrameFocusRect: {
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setPen(Qt::black);
 		int rw = r.width(), rh = r.height(), rx = r.x(), ry = r.y();
 		for (int x = 0; x < rw; x += 2) { // Top line
@@ -742,11 +857,14 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 				p->drawPoint(rx + x, ry + rh - 1);
 			}
 		}
+
+		p->restore();
+		
 		break;
 	}
 
 	case PE_IndicatorProgressChunk: {
-		drawGradientBox(p, r, opt->palette, cdata, false, 0.92,1.66);
+		drawGradientBox(p, opt, cdata, false, 0.92,1.66);
 		break;
 	}
 
@@ -754,6 +872,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorArrowDown:
 	case PE_IndicatorArrowRight:
 	case PE_IndicatorArrowLeft: {
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		// get button geometry
 		// add 1px of padding to make room for arrow shadow
 		int x = r.x() + 1;
@@ -772,6 +897,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		}
 
 		drawArrow(p, pe, x, y, width, height);
+
+		p->restore();
 		
 		break;
 	}
@@ -790,10 +917,19 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_PanelStatusBar: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setPen(cdata->shades[3]);
 		p->drawLine(r.left(), r.top(), r.right(), r.top());
 		p->setPen(cdata->shades[0]);
 	    p->drawLine(r.left(), r.top()+1, r.right(), r.top()+1);
+
+		p->restore();
+		
 		break;
 	}
 
@@ -827,7 +963,16 @@ void
 BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 							QPainter *p, const QWidget *widget) const
 {
-	const QRect &r = opt->rect;
+	const qreal dpr = getDpr(p);
+	const qreal inverseScale = qreal(1) / dpr;
+	QRect r; // Drawing rectangle for elements which must not be scaled
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		isScaled = true;
+	    r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
 	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
@@ -856,7 +1001,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			QIcon::State state = (button->state & State_On) ? QIcon::On : QIcon::Off;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			QPixmap pixmap = button->icon.pixmap(button->iconSize, getDpr(p), mode, state);
+			QPixmap pixmap = button->icon.pixmap(button->iconSize, dpr, mode, state);
 #else
 			QPixmap pixmap = button->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr, button->iconSize, mode, state);
 #endif
@@ -952,7 +1097,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 			    pm = toolbutton->icon.pixmap(toolbutton->rect.size().boundedTo(toolbutton->iconSize),
-											 getDpr(p), mode, state);
+											 dpr, mode, state);
 #else
 				pm = toolbutton->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
 											 toolbutton->rect.size().boundedTo(toolbutton->iconSize),
@@ -1011,8 +1156,18 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		if (!tabOpt) return;
 		
 		bool below = false;
-		QRect tr(r);
-		QRect fr(r);
+
+		QRect tr, fr;
+
+		p->save();
+		if (isScaled) {
+			tr = fr = getScaledRect((opt->rect.left() == 0) ? opt->rect : opt->rect.adjusted(-1, 0, 0, 0), dpr); 
+			
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		} else {
+			tr = fr = (opt->rect.left() == 0) ? opt->rect : opt->rect.adjusted(-1, 0, 0, 0); 
+		}
 
 		tr.adjust(0, 0,  0, -1); // NB: adjust replaces addCoords
 		fr.adjust(1, 2, -2, -2);
@@ -1021,12 +1176,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			tr = r; tr.adjust(0, 1, 0, 0);
 			fr = r; fr.adjust(2, 2,-2, -2);
 			below=true;
-		}
-
-		if (tr.left() != 0) {
-			// ensure tabs borders overlap
-			tr.adjust(-1,0,0,0);
-			fr.adjust(-1,0,0,0);
 		}
 
 		if (! (opt->state & State_Selected)) {
@@ -1105,9 +1254,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			}
 		}		
 
+		if (isScaled)
+			p->translate(-0.5, -0.5);
 		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : cdata->shades[2]));
+		p->restore();
 		break;
 	}
+
 
 	case CE_TabBarTabLabel: {
 		const QStyleOptionTab *tab = qstyleoption_cast<const QStyleOptionTab *>(opt);
@@ -1146,7 +1299,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		if (!tab->icon.isNull()) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)			
-			QPixmap tabIcon = tab->icon.pixmap(tab->iconSize, getDpr(p), QIcon::Normal,
+			QPixmap tabIcon = tab->icon.pixmap(tab->iconSize, dpr, QIcon::Normal,
 											   (tab->state & State_Selected) ? QIcon::On : QIcon::Off);
 #else
 			QPixmap tabIcon = tab->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr, tab->iconSize, QIcon::Normal,
@@ -1197,38 +1350,47 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 		if ( miOpt && miOpt->menuItemType == QStyleOptionMenuItem::Separator ) {
 			// draw separator
-			p->fillRect(r, opt->palette.brush(QPalette::Button));
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Button));
+
+			p->save();
+			if (isScaled) {
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			}
+			
 			p->setPen(cdata->shades[2]);
 			p->drawLine(r.left() + 6, r.top() + 4, r.right() - 6, r.top() + 4);
 			p->setPen(opt->palette.light().color());
 			p->drawLine(r.left() + 6,  r.top() + 5, r.right() - 6, r.top() + 5);
+
+			p->restore();
 			break;
 		}
 
 		if ((opt->state & State_Selected) && (opt->state & State_Enabled)) {
-			drawGradientBox(p, r, opt->palette, cdata, false, 0.9, 1.2);
+			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
 		} else {
-			p->fillRect(r, opt->palette.brush(QPalette::Button));
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Button));
 		}
 
 		maxpmw = std::max(maxpmw, 22);
 
 		QRect cr, ir, tr, sr;
 		// check column
-		cr.setRect(r.left(), r.top(), maxpmw, r.height());
+		cr.setRect(opt->rect.left(), opt->rect.top(), maxpmw, opt->rect.height());
 		// submenu indicator column
-		sr.setCoords(r.right() - 12, r.top(), r.right(), r.bottom());
+		sr.setCoords(opt->rect.right() - 12, opt->rect.top(), opt->rect.right(), opt->rect.bottom());
 		// tab/accelerator column
-		tr.setCoords(r.right() - tab - 4, r.top(), r.right() - 4, r.bottom());
+		tr.setCoords(opt->rect.right() - tab - 4, opt->rect.top(), opt->rect.right() - 4, opt->rect.bottom());
 		// item column
-		ir.setCoords(cr.right() + 4, r.top(), tr.right() - 4, r.bottom());
+		ir.setCoords(cr.right() + 4, opt->rect.top(), tr.right() - 4, opt->rect.bottom());
 
 		bool reverse = QGuiApplication::isRightToLeft();
 		if ( reverse ) {
-			cr = visualRect( opt->direction, r, cr );
-			sr = visualRect( opt->direction, r, sr );
-			tr = visualRect( opt->direction, r, tr );
-			ir = visualRect( opt->direction, r, ir );
+			cr = visualRect( opt->direction, opt->rect, cr );
+			sr = visualRect( opt->direction, opt->rect, sr );
+			tr = visualRect( opt->direction, opt->rect, tr );
+			ir = visualRect( opt->direction, opt->rect, ir );
 		}
 
 		if (!miOpt->icon.isNull()) {
@@ -1251,7 +1413,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		    const QIcon::State state = checked ? QIcon::On : QIcon::Off;
 			QPixmap pixmap;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			pixmap = miOpt->icon.pixmap(size, getDpr(p), mode, state);
+			pixmap = miOpt->icon.pixmap(size, dpr, mode, state);
 #else
 			pixmap = miOpt->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
 										size, mode, state);
@@ -1340,25 +1502,35 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_MenuBarItem: {
 		if ((opt->state & State_Enabled) && (opt->state & State_Sunken))
-			drawGradientBox(p, r, opt->palette, cdata, false, 0.9, 1.2);
+			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
 		else
-			p->fillRect(r, opt->palette.brush(QPalette::Button));
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Button));
 
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+		if (!miOpt)
+			break;
 
 		if (opt->state & State_Sunken)
-			drawItemText(p, r, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
+			drawItemText(p, opt->rect, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
 						 opt->palette, opt->state & State_Enabled, miOpt->text, QPalette::HighlightedText);
 		else
-			drawItemText(p, r, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
+			drawItemText(p, opt->rect, Qt::AlignCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine,
 						 opt->palette, opt->state & State_Enabled, miOpt->text, QPalette::ButtonText);
 		break;
 	}
 
 	case CE_ProgressBarGroove: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setBrush(cdata->shades[3]);
 		p->setPen(cdata->shades[5]);
 		p->drawRect(r.adjusted(0,0,-1,-1));
+
+		p->restore();
 		break;
 	}
 
@@ -1373,30 +1545,33 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 			// draw busy indicator
 
-			w = std::min(25, r.width()/2);
+			w = std::min(25, opt->rect.width()/2);
 			w = std::max(w, 1);
 
-			remains = r.width() - w;
+			remains = opt->rect.width() - w;
 			remains = std::max(remains, 1);
 
 			int x = progressbarOpt->progress % (remains * 2);
 			if (x > remains)
 				x = 2 * remains - x;
 
-			x = reverse ? r.right() - x - w : x + r.left();
-			pr.setRect (x, r.top(), w, r.height());
+			x = reverse ? opt->rect.right() - x - w : x + opt->rect.left();
+			pr.setRect (x, opt->rect.top(), w, opt->rect.height());
 		} else {
 			int pos = progressbarOpt->progress;
 			int total = (progressbarOpt->maximum - progressbarOpt->minimum) ?
 				(progressbarOpt->maximum - progressbarOpt->minimum) : 1;
-			int w = (int)(((double)pos*r.width())/total);
+			int w = (int)(((double)pos*opt->rect.width())/total);
 
 			if (reverse)
-				pr.setRect (r.right() - w, r.top(), w, r.height());
+				pr.setRect (opt->rect.right() - w, opt->rect.top(), w, opt->rect.height());
 			else
-				pr.setRect (r.left(), r.top(), w, r.height());
+				pr.setRect (opt->rect.left(), opt->rect.top(), w, opt->rect.height());
 		}
-		drawGradientBox(p, pr, opt->palette, cdata, false, 0.92, 1.66);
+		QStyleOption optCopy(*opt);
+		optCopy.rect = pr;
+		
+		drawGradientBox(p, &optCopy, cdata, false, 0.92, 1.66);
 		
 		break;
 	}
@@ -1420,7 +1595,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
 
 		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
-		drawItemText(p, r, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
+		drawItemText(p, opt->rect, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
 					 opt->palette, opt->state & State_Enabled, checkboxOpt->text);	
 		
 		break;
@@ -1438,14 +1613,19 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		optCopy.state = state;
 
 		drawLightBevel(p, &optCopy, fill);
-		p->setPen( opt->palette.buttonText().color() );
 		
 		break;
 	}
 
 	case CE_Splitter: {
 		if (opt->state & State_MouseOver)
-			p->fillRect(r, opt->palette.midlight());
+			p->fillRect(opt->rect, opt->palette.midlight());
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 		
 		if (opt->state & State_Horizontal) {
 			int y_mid = r.center().y()+2;
@@ -1464,6 +1644,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
 			}
 		}
+
+		p->restore();
 
 		break;
 	}
@@ -1497,7 +1679,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_ScrollBarSubPage:
 	case CE_ScrollBarAddPage: {
-		p->fillRect(r, cdata->shades[3]);
+		p->fillRect(opt->rect, cdata->shades[3]);
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setPen(cdata->shades[5]);
 		if (opt->state & State_Horizontal) {
 			p->drawLine(r.left(), r.top(), r.right(), r.top());
@@ -1506,34 +1695,30 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(r.left(), r.top(), r.left(), r.bottom());
 			p->drawLine(r.right(), r.top(), r.right(), r.bottom());
 		}
+
+		p->restore();
+		
 		break;
 	}
 
 	case CE_ScrollBarSlider: {
 		int x1, y1;
-		p->setPen(opt->palette.dark().color());
-		// Not the best place to put this, but it seems to be the only place where it works correctly
-
-		// Expand the slider one pixel in each direction, 
-		// to avoid double lines in the extreme positions.
-		QRect r2 = r;
-		if (opt->state & State_Horizontal) {
-			r2.setWidth(r.width() + 1);
-			r2.setX(r.x() - 1);
-		} else {
-			r2.setHeight(r.height() + 1);
-			r2.setY(r.y() - 1);
-		}
 
 		// Highlight on mouse over
 		QStyleOption optCopy(*opt);
 	    optCopy.state = (opt->state & ~State_Sunken) | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
 	    drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
 
-		if (opt->state & State_Horizontal && r.width() < 31)
+		if (opt->state & State_Horizontal && opt->rect.width() < 31)
 			break;
-		if (!(opt->state & State_Horizontal) && r.height() < 31)
+		if (!(opt->state & State_Horizontal) && opt->rect.height() < 31)
 			break;
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 
 		// Scrollbar diagonal handle
 		p->setPen(cdata->shades[5]);
@@ -1565,12 +1750,22 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(x1 + 5, y1 + 1 + 5,	x1 + 1, y1 + 5 + 5);
 			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
 		}
+
+		p->restore();
 		
 		break;
 	}
 
 	case CE_SizeGrip: {
 		const QStyleOptionSizeGrip *grip = qstyleoption_cast<const QStyleOptionSizeGrip *>(opt);
+		if (!grip)
+			break;
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
 
 		int x = r.x();
 		int y = r.y();
@@ -1690,16 +1885,27 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 		}
 		}
-		
+
+		p->restore();
 		break;
 	}
 
 	case CE_ToolBar: {		
-		p->fillRect(r, opt->palette.button());
+		p->fillRect(opt->rect, opt->palette.button());
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
 		p->setPen(cdata->shades[0]);
 		p->drawLine(r.left(), r.top(), r.right(), r.top());
 		p->setPen(cdata->shades[3]);
 		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+
+		p->restore();
+		
 		break;
 	}
 		
@@ -1763,6 +1969,17 @@ void
 BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionComplex *opt,
 								   QPainter *p, const QWidget *widget) const
 {
+	const qreal dpr = getDpr(p);
+	const qreal inverseScale = qreal(1) / dpr;
+	QRect r;
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		isScaled = true;
+	    r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
+	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
@@ -1793,33 +2010,58 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			arrowOpt.palette = opt->palette;
 			
 			drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p);
-			p->setPen(cdata->shades[3]);
-			p->drawLine((arrow.left()+arrow.right())/2-2, 
-						(arrow.top()+arrow.bottom())/2+5, 
-						(arrow.left()+arrow.right())/2+2,
-						(arrow.top()+arrow.bottom())/2+5);
-			p->drawLine((arrow.left()+arrow.right())/2-2,
-						(arrow.top()+arrow.bottom())/2+6,
-						(arrow.left()+arrow.right())/2+2,
-						(arrow.top()+arrow.bottom())/2+6);
+
+			p->save();
+
+			QRect arrowScaled; // drawing area to be scaled			
+			if (isScaled) {
+				arrowScaled = getScaledRect(arrow, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				arrowScaled = arrow;
+			
+			p->setPen(cdata->shades[3]);			
+			p->drawLine((arrowScaled.left()+arrowScaled.right())/2-2, 
+						(arrowScaled.top()+arrowScaled.bottom())/2+5, 
+						(arrowScaled.left()+arrowScaled.right())/2+2,
+						(arrowScaled.top()+arrowScaled.bottom())/2+5);
+			p->drawLine((arrowScaled.left()+arrowScaled.right())/2-2,
+						(arrowScaled.top()+arrowScaled.bottom())/2+6,
+						(arrowScaled.left()+arrowScaled.right())/2+2,
+						(arrowScaled.top()+arrowScaled.bottom())/2+6);
+
+			p->restore();
 		}
 
 		if ((opt->subControls & SC_ComboBoxEditField) && field.isValid()) {
+			p->save();
 			p->setPen(cdata->shades[4]);
+
+			QRect fieldScaled;
+			if (isScaled) {
+				fieldScaled = getScaledRect(field, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				fieldScaled = field;
+			
 			if (comboboxOpt->editable) {
-				field.adjust(-1, -1, 1, 1);
-				p->drawLine(field.right(), field.top() - 1,
-							field.right(), field.bottom() + 1);
+				fieldScaled.adjust(-1, -1, 1, 1);
+				p->drawLine(fieldScaled.right(), fieldScaled.top() - 1,
+							fieldScaled.right(), fieldScaled.bottom() + 1);
 				p->setPen(opt->palette.light().color());
-				p->drawLine(field.right() + 1, field.top(),
-							field.right() + 1, field.bottom() );
+				p->drawLine(fieldScaled.right() + 1, fieldScaled.top(),
+							fieldScaled.right() + 1, fieldScaled.bottom() );
 			} else {
-				p->drawLine(field.right() + 1, field.top() - 2,
-							field.right() + 1, field.bottom() + 2);
+				p->drawLine(fieldScaled.right() + 1, fieldScaled.top() - 2,
+							fieldScaled.right() + 1, fieldScaled.bottom() + 2);
 				p->setPen(opt->palette.light().color());
-				p->drawLine(field.right() + 2, field.top() - 1,
-							field.right() + 2, field.bottom() + 1);
+				p->drawLine(fieldScaled.right() + 2, fieldScaled.top() - 1,
+							fieldScaled.right() + 2, fieldScaled.bottom() + 1);
 			}
+
+			p->restore();
 
 			if (opt->state & State_HasFocus) {
 				if (! comboboxOpt->editable) {
@@ -1833,11 +2075,6 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				}
 			}
 
-			if (opt->state & State_Enabled)
-				p->setPen(opt->palette.buttonText().color());
-			else
-				p->setPen(opt->palette.mid().color());
-			
 		}
 		
 		break;
@@ -1848,21 +2085,34 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		QRect frame, up, down;
 
 		frame = subControlRect(CC_SpinBox, opt, SC_SpinBoxFrame, widget);
-		up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
-		down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
-
+		
 		if ((opt->subControls & SC_SpinBoxFrame) && frame.isValid()) {
 			QStyleOption textOpt;
 			textOpt.state = opt->state | State_Sunken;
 			textOpt.rect = frame;
 			textOpt.palette = opt->palette;
 			drawTextRect(p, &textOpt, &opt->palette.brush(QPalette::Base));
+		}	   
+
+		p->save();
+		if (isScaled) {
+			up = getScaledRect(subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget), dpr);
+			down = getScaledRect(subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget), dpr);
+			
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		} else {
+			up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
+			down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
 		}
 
 		p->setPen(cdata->shades[5]);
 		p->drawLine(up.topLeft(), down.bottomLeft());
 		p->drawLine(up.left(), up.bottom()+1, up.right(), up.bottom()+1);
+		p->restore();
 
+		up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
+		down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
 		if ((opt->subControls & SC_SpinBoxUp) && up.isValid()) {
 			PrimitiveElement pe = PE_IndicatorSpinUp;
 
@@ -1870,23 +2120,35 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				pe = PE_IndicatorSpinPlus;
 
 			up.adjust(1, 0, 0, 0);
-			p->fillRect(up, opt->palette.brush(QPalette::Button));
-
+			p->fillRect(up, opt->palette.brush(QPalette::Button));			
+			
 			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
 				p->setPen(cdata->shades[2]);
 			else
 				p->setPen(opt->palette.light().color());
 
-			p->drawLine(up.left(), up.top(), up.right(), up.top());
-			p->drawLine(up.left(), up.top(), up.left(), up.bottom());
+			p->save();
+
+			QRect upScaled;
+			if (isScaled) {
+				upScaled = getScaledRect(up, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				upScaled = up;
+
+			p->drawLine(upScaled.left(), upScaled.top(), upScaled.right(), upScaled.top());
+			p->drawLine(upScaled.left(), upScaled.top(), upScaled.left(), upScaled.bottom());
 
 			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
 				p->setPen(opt->palette.light().color());
 			else
 				p->setPen(cdata->shades[2]);
 
-			p->drawLine(up.right(), up.top()+1, up.right(), up.bottom());
-			p->drawLine(up.left()+1, up.bottom(), up.right(), up.bottom());
+			p->drawLine(upScaled.right(), upScaled.top()+1, upScaled.right(), upScaled.bottom());
+			p->drawLine(upScaled.left()+1, upScaled.bottom(), upScaled.right(), upScaled.bottom());
+
+			p->restore();
 
 			up.adjust(1, 0, 0, 0);
 
@@ -1913,18 +2175,30 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			else
 				p->setPen(opt->palette.light().color());
 
-			p->drawLine(down.left(), down.top(), down.right(), down.top());
-			p->drawLine(down.left(), down.top(), down.left(), down.bottom());
+			p->save();
+
+			QRect downScaled;
+			if (isScaled) {
+				downScaled = getScaledRect(down, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				downScaled = down;
+
+			p->drawLine(downScaled.left(), downScaled.top(), downScaled.right(), downScaled.top());
+			p->drawLine(downScaled.left(), downScaled.top(), downScaled.left(), downScaled.bottom());
 
 			if ((opt->activeSubControls == SC_SpinBoxDown) && (opt->state & State_Sunken))
 				p->setPen(opt->palette.light().color());
 			else
 				p->setPen(cdata->shades[2]);
 
-			p->drawLine(down.right(), down.top()+1,
-						down.right(), down.bottom());
-			p->drawLine(down.left()+1, down.bottom(),
-						down.right(), down.bottom());
+			p->drawLine(downScaled.right(), downScaled.top()+1,
+						downScaled.right(), downScaled.bottom());
+			p->drawLine(downScaled.left()+1, downScaled.bottom(),
+						downScaled.right(), downScaled.bottom());
+
+			p->restore();
 
 			down.adjust(1, 0, 0, 0);
 
@@ -1935,11 +2209,11 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 			indicatorOpt.rect = down;
 			indicatorOpt.palette = opt->palette;
 			drawPrimitive(pe, &indicatorOpt, p);
-			}
+		}
 		
 		break;
 	}
-
+		
 	case CC_Slider: {
 		const QStyleOptionSlider *sliderOpt = qstyleoption_cast<const QStyleOptionSlider *>(opt);
 		QRect groove = subControlRect(CC_Slider, opt, SC_SliderGroove, widget);
@@ -1964,60 +2238,81 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				handle.adjust(1, 0, -1, 0);
 			}
 
+			p->save();
+
+			QRect grooveScaled;
+			if (isScaled) {
+				grooveScaled = getScaledRect(groove, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				grooveScaled = groove;
+						
 			p->setPen(cdata->shades[5]);
 			p->setBrush(opt->palette.mid().color());
-			p->drawRect(groove.adjusted(0,0,-1,-1));
+			p->drawRect(grooveScaled.adjusted(0,0,-1,-1));
 			p->setPen(cdata->shades[4]);
-			p->drawLine(groove.left()+1, groove.top()+1,
-						groove.left()+1, groove.bottom()-1);
-			p->drawLine(groove.left()+1, groove.top()+1,
-						groove.right()-1, groove.top()+1);
+			p->drawLine(grooveScaled.left()+1, grooveScaled.top()+1,
+						grooveScaled.left()+1, grooveScaled.bottom()-1);
+			p->drawLine(grooveScaled.left()+1, grooveScaled.top()+1,
+						grooveScaled.right()-1, grooveScaled.top()+1);
+
+			p->restore();
 		}
 
 		if ((opt->subControls & SC_SliderHandle) && handle.isValid()) {
+			p->save();
+			QRect handleScaled; // use this name to avoid confusion
+			if (isScaled) {
+				handleScaled = getScaledRect(handle, dpr);
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			} else
+				handleScaled = handle;
+			
 			p->setPen(cdata->shades[6]);
-			p->drawLine(handle.x() + 2, handle.y(),
-						handle.right() - 2, handle.y());
-			p->drawLine(handle.x(), handle.y() + 2,
-						handle.x(), handle.bottom() - 2);
-			p->drawLine(handle.right(), handle.y() + 2,
-						handle.right(), handle.bottom() - 2);
-			p->drawLine(handle.x() + 2, handle.bottom(),
-						handle.right() - 2, handle.bottom());
-			p->drawPoint(handle.x() + 1, handle.y() + 1);
-			p->drawPoint(handle.right() - 1, handle.y() + 1);
-			p->drawPoint(handle.right() - 1, handle.bottom() - 1);
-			p->drawPoint (handle.x() + 1, handle.bottom() - 1);
+			p->drawLine(handleScaled.x() + 2, handleScaled.y(),
+						handleScaled.right() - 2, handleScaled.y());
+			p->drawLine(handleScaled.x(), handleScaled.y() + 2,
+						handleScaled.x(), handleScaled.bottom() - 2);
+			p->drawLine(handleScaled.right(), handleScaled.y() + 2,
+						handleScaled.right(), handleScaled.bottom() - 2);
+			p->drawLine(handleScaled.x() + 2, handleScaled.bottom(),
+						handleScaled.right() - 2, handleScaled.bottom());
+			p->drawPoint(handleScaled.x() + 1, handleScaled.y() + 1);
+			p->drawPoint(handleScaled.right() - 1, handleScaled.y() + 1);
+			p->drawPoint(handleScaled.right() - 1, handleScaled.bottom() - 1);
+			p->drawPoint (handleScaled.x() + 1, handleScaled.bottom() - 1);
 			  
 
 			p->setPen(cdata->shades[2]);
-			p->drawLine(handle.x() + 2, handle.bottom() - 1,
-						handle.right() - 2, handle.bottom() - 1);
-			p->drawLine(handle.right() - 1, handle.top() + 2,
-						handle.right() - 1, handle.bottom() - 2);
-			p->drawPoint (handle.x() + 1, handle.y());
-			p->drawPoint (handle.right() - 1, handle.y());
-			p->drawPoint (handle.x(), handle.y() + 1);
-			p->drawPoint (handle.right(), handle.y() + 1);
-			p->drawPoint (handle.x(), handle.bottom() - 1);
-			p->drawPoint (handle.right(), handle.bottom() - 1);
-			p->drawPoint (handle.x() + 1, handle.bottom() );
-			p->drawPoint (handle.right() - 1, handle.bottom());
+			p->drawLine(handleScaled.x() + 2, handleScaled.bottom() - 1,
+						handleScaled.right() - 2, handleScaled.bottom() - 1);
+			p->drawLine(handleScaled.right() - 1, handleScaled.top() + 2,
+						handleScaled.right() - 1, handleScaled.bottom() - 2);
+			p->drawPoint (handleScaled.x() + 1, handleScaled.y());
+			p->drawPoint (handleScaled.right() - 1, handleScaled.y());
+			p->drawPoint (handleScaled.x(), handleScaled.y() + 1);
+			p->drawPoint (handleScaled.right(), handleScaled.y() + 1);
+			p->drawPoint (handleScaled.x(), handleScaled.bottom() - 1);
+			p->drawPoint (handleScaled.right(), handleScaled.bottom() - 1);
+			p->drawPoint (handleScaled.x() + 1, handleScaled.bottom() );
+			p->drawPoint (handleScaled.right() - 1, handleScaled.bottom());
 			  
 			p->setPen(Qt::white);
-			p->drawLine (handle.x() + 2, handle.y() + 1,
-						 handle.right() - 2, handle.y() + 1);
-			p->drawLine (handle.x() + 1, handle.y() + 2,
-						 handle.x() + 1, handle.bottom() - 2);
+			p->drawLine (handleScaled.x() + 2, handleScaled.y() + 1,
+						 handleScaled.right() - 2, handleScaled.y() + 1);
+			p->drawLine (handleScaled.x() + 1, handleScaled.y() + 2,
+						 handleScaled.x() + 1, handleScaled.bottom() - 2);
 
 			//p->setBrush(opt->palette.button().color());
-			QRect fillr (handle);
+			QRect fillr (handleScaled);
 			fillr.adjust(2, 2, -2, -2);			
 			p->fillRect (fillr, opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button));
 
 			if (sliderOpt->orientation == Qt::Horizontal) {
-				int x1 = handle.x() + handle.width() / 2 - 5;
-				int y1 = handle.y() + (handle.height() - 7) / 2;
+				int x1 = handleScaled.x() + handleScaled.width() / 2 - 5;
+				int y1 = handleScaled.y() + (handleScaled.height() - 7) / 2;
 
 				p->setPen(cdata->shades[5]);
 				p->drawLine(x1 + 0, y1 + 4,
@@ -2035,8 +2330,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				p->drawLine(x1 + 8, y1 + 5,
 							x1 + 10, y1 + 3);
 			} else {
-				int x1 = handle.x() + (handle.width() - 7) / 2;
-				int y1 = handle.y() + handle.height() / 2 - 5;
+				int x1 = handleScaled.x() + (handleScaled.width() - 7) / 2;
+				int y1 = handleScaled.y() + handleScaled.height() / 2 - 5;
 
 				p->setPen(cdata->shades[5]);
 				p->drawLine(x1 + 4, y1 + 0,
@@ -2054,6 +2349,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				p->drawLine(x1 + 5, y1 + 8,
 							x1 + 3, y1 + 10);
 			}
+
+			p->restore();
 		}
 
 		if (opt->subControls & SC_SliderTickmarks) {
@@ -2090,7 +2387,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		QStyleOption tool = *toolbutton;
 		if (toolbutton->subControls & SC_ToolButton) {
 			if (bflags & (State_Sunken | State_On | State_Raised)) {
-				if (toolbutton->subControls & SC_ToolButtonMenu) {
+				if (toolbutton->subControls & SC_ToolButtonMenu) {					
 					QBrush fill;
 					bool sunken =
 						(bflags & (QStyle::State_On | QStyle::State_Sunken));
@@ -2102,34 +2399,44 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 						fill = opt->palette.brush(QPalette::Midlight);
 					else
 						fill = (bflags & QStyle::State_On) ? opt->palette.brush(QPalette::Mid)
-							: opt->palette.brush(QPalette::Button); 
+							: opt->palette.brush(QPalette::Button);
+
+					p->save();
+					QRect buttonScaled; // use this name to avoid confusion
+					if (isScaled) {
+						buttonScaled = getScaledRect(button, dpr);
+						p->scale(inverseScale, inverseScale);
+						p->translate(0.5, 0.5);
+					} else
+						buttonScaled = button;
 
 					p->setPen(cdata->shades[6]);
-					p->drawLine(button.topLeft(), button.topRight());
-					p->drawLine(button.topLeft(), button.bottomLeft());
-					p->drawLine(button.bottomLeft(), button.bottomRight());
+					p->drawLine(buttonScaled.topLeft(), buttonScaled.topRight());
+					p->drawLine(buttonScaled.topLeft(), buttonScaled.bottomLeft());
+					p->drawLine(buttonScaled.bottomLeft(), buttonScaled.bottomRight());
 
 					if (bflags & (QStyle::State_On |
 									  QStyle::State_Sunken | QStyle::State_Raised)) {
-						// button bevel
+						// buttonScaled bevel
 						p->setPen(sunken ? Qt::white : cdata->shades[2]);
 						if (sunken)
-							p->drawLine(button.x() + button.width() - 1, button.y() + 2,
-										button.x() + button.width() - 1, button.y() + button.height() - 3); // right
-						p->drawLine(button.x() + 1, button.y() + button.height() - 2,
-									button.x() + button.width() - 1, button.y() + button.height() - 2); // bottom
+							p->drawLine(buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + 2,
+										buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + buttonScaled.height() - 3); // right
+						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + buttonScaled.height() - 2,
+									buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + buttonScaled.height() - 2); // bottom
 
 						p->setPen(sunken ? cdata->shades[2] : Qt::white);
-						p->drawLine(button.x() + 1, button.y() + 2,
-									button.x() + 1, button.y() + button.height() - 2); // left
-						p->drawLine(button.x() + 1, button.y() + 1,
-									button.x() + button.width() - 1, button.y() + 1); // top
+						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + 2,
+									buttonScaled.x() + 1, buttonScaled.y() + buttonScaled.height() - 2); // left
+						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + 1,
+									buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + 1); // top
 
 					    br.adjust(2, 2, -1, -2);
 					} else {
 						br.adjust(1, 1, 0, -1);
 					}
 
+					p->restore();
 					p->fillRect(br, fill);
 					
 				} else {					
@@ -2735,14 +3042,26 @@ BluecurveStyle::drawGradient(QPainter *p, QRect const &rect,
 }
 
 void
-BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
-								const QPalette &palette,
+BluecurveStyle::drawGradientBox(QPainter *p, const QStyleOption *opt,
 								const BluecurveColorData *cdata,
 								bool horiz,
 								double shade1, double shade2) const
 {
+	p->save();
+	
+	const qreal dpr = getDpr(p);
+	QRect r;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		const qreal inverseScale = qreal(1) / dpr;
+		p->scale(inverseScale, inverseScale);
+		p->translate(0.5, 0.5);
+	    r = getScaledRect(opt->rect, dpr);
+	} else {
+		r = opt->rect;
+	}
+	
 	QRect grad(r.left()+2, r.top()+2, r.width()-3, r.height()-3);
-	drawGradient(p, grad, palette, shade1, shade2, horiz);
+	drawGradient(p, grad, opt->palette, shade1, shade2, horiz);
 
 // 3d border effect...
 	p->setPen(cdata->spots[2]);
@@ -2758,6 +3077,8 @@ BluecurveStyle::drawGradientBox(QPainter *p, QRect const &r,
 	p->setPen(cdata->spots[0]);
 	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
 	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
+
+	p->restore();
 }
 
 void
