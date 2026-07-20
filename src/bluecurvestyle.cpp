@@ -1603,16 +1603,23 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_HeaderSection: {
 		const QBrush *fill;
-		QStyle::State state = ((opt->state | State_Sunken) ^ State_Sunken) | State_Raised;
-		if (! (state & State_Sunken) && (state & State_On))
-			fill = &opt->palette.brush(QPalette::Midlight);
-		else
+		QStyle::State state = opt->state;
+		if (!(state & (QStyle::State_Sunken | QStyle::State_Raised)))
+			state |= QStyle::State_Raised;
+
+		if (state & State_On) {
+			if (state & State_Sunken)
+				fill = &opt->palette.brush(QPalette::Mid);
+			else
+				fill = &opt->palette.brush(QPalette::Midlight);
+		} else {
 			fill = &opt->palette.brush(QPalette::Button);
+		}
 
-	    QStyleOption optCopy(*opt);
-		optCopy.state = state;
+		QStyleOption optCopy(*opt);
+        optCopy.state = state;
 
-		drawLightBevel(p, &optCopy, fill);
+        drawLightBevel(p, &optCopy, fill); 
 		
 		break;
 	}
