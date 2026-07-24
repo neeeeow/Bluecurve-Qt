@@ -664,28 +664,30 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (state & State_Horizontal) {
 			p->fillRect(r, opt->palette.button().color());
 
+			int xx = r.left() + (r.width() - 4) / 2;
 			int yy = r.top() + 3;
 			int nLines = (r.height() - 6) / 5;
 
 			for (int i = 0; i < nLines; yy += 5, i++) {
 				p->setPen(cdata->shades[5]);
-				p->drawLine(1, yy + 3, 4, yy);
+				p->drawLine(xx, yy + 3, xx + 3, yy);
 				p->setPen(Qt::white);
-				p->drawLine(1, yy + 4, 4, yy + 1);
+				p->drawLine(xx, yy + 4, xx + 3, yy + 1);
 			}			
 		} else {
 			p->fillRect(r, opt->palette.button().color());
 
 			int xx = r.left() + 3;
+			int yy = r.top() + (r.height() - 4) / 2;
 			int nLines = (r.width() - 5) / 4;
 
 			for (int i = 0; i < nLines; xx += 4, i++) {
 				p->setPen(cdata->shades[5]);
-				p->drawLine(xx + 3, 1,
-							xx, 1 + 3);
+				p->drawLine(xx + 3, yy,
+							xx, yy + 3);
 				p->setPen(Qt::white);
-				p->drawLine(xx + 3, 2,
-							xx + 1, 1 + 3);
+				p->drawLine(xx + 3, yy + 1,
+							xx + 1, yy + 4);
 			}
 		}
 
