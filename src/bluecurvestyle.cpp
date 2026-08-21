@@ -55,8 +55,26 @@
 
 const double BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768, 0.665, 0.4, 0.205};
 
+static qreal
+getDpr(const QPainter *p)
+{		
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	return p->device() ? p->device()->devicePixelRatio() : 1.0;
+#else
+	return p->device() ? p->device()->devicePixelRatioF() : 1.0;
+#endif
+}
+
+// Scales a QRect for drawing pixel-perfect lines on HiDPI displays
+static QRect
+getScaledRect(const QRect &rect, const qreal dpr)
+{
+	return QRect(qRound(rect.x() * dpr), qRound(rect.y() * dpr), rect.width() * dpr, rect.height() * dpr);
+}
+
 static void
-shade (const QColor &ca, QColor &cb, double k) {
+shade (const QColor &ca, QColor &cb, double k)
+{
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	float h, s, l;
 #else
@@ -188,6 +206,63 @@ static long
 hashColorGroup (const QPalette &palette)
 {
 	return palette.button().color().rgb() << 8 ^ palette.highlight().color().rgb();
+}
+
+static QPixmap
+pixmap_saturate_and_pixelate(const QPixmap &src,
+							 qreal saturation,
+							 bool pixelate)
+{
+	/* Adapted from GDK source */
+	
+	if (saturation == 1.0 && !pixelate)
+		return src;
+
+	// Convert pixmaps to images
+	QImage src_img(src.toImage());
+	QImage dest_img(src_img);
+
+	// Convert to Format_ARGB32, to make manipulation easier
+	src_img.convertTo(QImage::Format_ARGB32);
+	dest_img.convertTo(QImage::Format_ARGB32);
+
+	int width = src_img.width();
+	int height = src_img.height();
+	
+	for (int i = 0; i < height; i++) {
+		// best practice to cast to QRgb, per Qt documentation
+	    const QRgb *src_line = reinterpret_cast<const QRgb *>(src_img.constScanLine(i));
+	    QRgb *dest_line = reinterpret_cast<QRgb *>(dest_img.scanLine(i));
+
+		for (int j = 0; j < width; j++) {
+			QRgb src_pixel = src_line[j];
+			int dest_r, dest_g, dest_b, dest_a; // dest QRgb values
+			
+			int intensity = (int)(qRed(src_pixel) * 0.3 + qGreen(src_pixel) * 0.59 + qBlue(src_pixel) * 0.11);
+			auto saturate = [saturation, intensity](int v) {
+				return (1.0 - saturation) * intensity + saturation * v;
+			};
+
+			if (pixelate && (i + j) % 2 == 0) {
+				dest_r = intensity / 2 + 127;
+				dest_g = intensity / 2 + 127;
+				dest_b = intensity / 2 + 127;
+			} else if (pixelate) {
+				dest_r = qBound(0, (int)(saturate(qRed(src_pixel)) * DARK_FACTOR), 255);
+				dest_g = qBound(0, (int)(saturate(qGreen(src_pixel)) * DARK_FACTOR), 255);
+				dest_b = qBound(0, (int)(saturate(qBlue(src_pixel)) * DARK_FACTOR), 255);
+			} else {
+				dest_r = qBound(0, (int)saturate(qRed(src_pixel)), 255);
+				dest_g = qBound(0, (int)saturate(qGreen(src_pixel)), 255);
+				dest_b = qBound(0, (int)saturate(qBlue(src_pixel)), 255);
+			}
+
+			dest_a = qAlpha(src_pixel);
+			dest_line[j] = qRgba(dest_r, dest_b, dest_g, dest_a);
+		}
+	}
+	
+	return QPixmap::fromImage(dest_img);
 }
 
 BluecurveStyle::BluecurveColorData::~BluecurveColorData()
@@ -3310,61 +3385,4 @@ BluecurveStyle::arrow_draw_vline(QPainter *p,
 		p->drawLine(x, y1, x, y1+2);
 		p->drawLine(x, y2-2, x, y2);
     }
-}
-
-/* Adapted from GDK source */
-
-QPixmap
-BluecurveStyle::pixmap_saturate_and_pixelate(const QPixmap &src,
-											 qreal saturation,
-											 bool pixelate)
-{
-	if (saturation == 1.0 && !pixelate)
-		return src;
-
-	// Convert pixmaps to images
-	QImage src_img(src.toImage());
-	QImage dest_img(src_img);
-
-	// Convert to Format_ARGB32, to make manipulation easier
-	src_img.convertTo(QImage::Format_ARGB32);
-	dest_img.convertTo(QImage::Format_ARGB32);
-
-	int width = src_img.width();
-	int height = src_img.height();
-	
-	for (int i = 0; i < height; i++) {
-		// best practice to cast to QRgb, per Qt documentation
-	    const QRgb *src_line = reinterpret_cast<const QRgb *>(src_img.constScanLine(i));
-	    QRgb *dest_line = reinterpret_cast<QRgb *>(dest_img.scanLine(i));
-
-		for (int j = 0; j < width; j++) {
-			QRgb src_pixel = src_line[j];
-			int dest_r, dest_g, dest_b, dest_a; // dest QRgb values
-			
-			int intensity = (int)(qRed(src_pixel) * 0.3 + qGreen(src_pixel) * 0.59 + qBlue(src_pixel) * 0.11);
-			auto saturate = [saturation, intensity](int v) {
-				return (1.0 - saturation) * intensity + saturation * v;
-			};
-
-			if (pixelate && (i + j) % 2 == 0) {
-				dest_r = intensity / 2 + 127;
-				dest_g = intensity / 2 + 127;
-				dest_b = intensity / 2 + 127;
-			} else if (pixelate) {
-				dest_r = qBound(0, (int)(saturate(qRed(src_pixel)) * DARK_FACTOR), 255);
-				dest_g = qBound(0, (int)(saturate(qGreen(src_pixel)) * DARK_FACTOR), 255);
-				dest_b = qBound(0, (int)(saturate(qBlue(src_pixel)) * DARK_FACTOR), 255);
-			} else {
-				dest_r = qBound(0, (int)saturate(qRed(src_pixel)), 255);
-				dest_g = qBound(0, (int)saturate(qGreen(src_pixel)), 255);
-				dest_b = qBound(0, (int)saturate(qBlue(src_pixel)), 255);
-			}
-
-			dest_a = qAlpha(src_pixel);
-			dest_line[j] = qRgba(dest_r, dest_b, dest_g, dest_a);
-		}
-	}
-	
-	return QPixmap::fromImage(dest_img);
 }

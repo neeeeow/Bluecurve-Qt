@@ -11,7 +11,7 @@ set_target_properties(bluecurve-style-qt${QT_MAJOR_VERSION} PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/qt${QT_MAJOR_VERSION}"
 )
 
-target_link_libraries(bluecurve-style-qt${QT_MAJOR_VERSION}
+target_link_libraries(bluecurve-style-qt${QT_MAJOR_VERSION} PRIVATE
   Qt${QT_MAJOR_VERSION}::Widgets
 )
 

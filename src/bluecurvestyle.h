@@ -98,25 +98,5 @@ private:
 
 	static void arrow_draw_vline(QPainter *p, int y1, int y2,
 						  int x, bool last);
-
-	static QPixmap pixmap_saturate_and_pixelate(const QPixmap &src,
-												qreal saturation,
-												bool pixelate);
-
-	static inline qreal getDpr(const QPainter *p)
-		{		
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			return p->device() ? p->device()->devicePixelRatio() : 1.0;
-#else
-			return p->device() ? p->device()->devicePixelRatioF() : 1.0;
-#endif
-		}
-
-
-	// Scales a QRect for drawing pixel-perfect lines on HiDPI displays
-	static inline QRect getScaledRect(const QRect &rect, const qreal dpr)
-		{
-			return QRect(qRound(rect.x() * dpr), qRound(rect.y() * dpr), rect.width() * dpr, rect.height() * dpr);
-		}
 	
 };
