@@ -680,7 +680,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		button.features = QStyleOptionButton::Flat;
 
 		// Draw the button
-		drawPrimitive(PE_PanelButtonTool, &button, p, widget);
+		proxy()->drawPrimitive(PE_PanelButtonTool, &button, p, widget);
 
 		// Draw icon
 		const int iconWidth(pixelMetric(QStyle::PM_SmallIconSize, opt, widget));
@@ -696,7 +696,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (!(opt->state & State_Enabled))
 			pixmap = pixmap_saturate_and_pixelate(pixmap, 0.8, true);
 		
-	    drawItemPixmap(p, button.rect, Qt::AlignCenter, pixmap);
+	    proxy()->drawItemPixmap(p, button.rect, Qt::AlignCenter, pixmap);
 		
 		break;
 	}
@@ -846,7 +846,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		QStyleOption dockWidgetHandle(*opt);
 		bool horizontal = opt->state & State_Horizontal;
         dockWidgetHandle.state.setFlag(State_Horizontal, !horizontal);
-		drawControl(CE_Splitter, &dockWidgetHandle, p, widget);
+		proxy()->drawControl(CE_Splitter, &dockWidgetHandle, p, widget);
 		break;
 	}
 
@@ -1041,7 +1041,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		// Little hack to always force State_Enabled, per the Qt3 theme
 		QStyleOption optCopy(*opt);
 		optCopy.state |= State_Enabled;
-		drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
+		proxy()->drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
 		break;
 	}
 	case PE_IndicatorSpinUp:
@@ -1050,9 +1050,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	    optCopy.rect = opt->rect.adjusted(1,3,-3,-1);
 		
 		if (pe==PE_IndicatorSpinUp)
-			drawPrimitive(PE_IndicatorArrowUp, &optCopy, p, widget);
+			proxy()->drawPrimitive(PE_IndicatorArrowUp, &optCopy, p, widget);
 		else
-			drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
+			proxy()->drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
 		
 		break;
 	}
@@ -1194,7 +1194,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		arrowOpt.palette = opt->palette;
 		arrowOpt.state = opt->state & ~State_MouseOver;
 		arrowOpt.rect = opt->rect.adjusted(3,3,-3,-3);
-	    drawPrimitive(pe, &arrowOpt, p, widget);
+	    proxy()->drawPrimitive(pe, &arrowOpt, p, widget);
 	  
 		break;
 	}
@@ -1291,7 +1291,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			tf |= Qt::TextHideMnemonic;
 
 		if (button->features & QStyleOptionButton::HasMenu) {
-			int indicatorSize = pixelMetric(PM_MenuButtonIndicator, button, widget);
+			int indicatorSize = proxy()->pixelMetric(PM_MenuButtonIndicator, button, widget);
 			if (button->direction == Qt::LeftToRight)
 				textRect = textRect.adjusted(0, 0, -indicatorSize, 0);
 			else
@@ -1343,7 +1343,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			tf |= Qt::AlignHCenter;
 		}
 
-		drawItemText(p, textRect, tf, button->palette, (button->state & State_Enabled),
+		proxy()->drawItemText(p, textRect, tf, button->palette, (button->state & State_Enabled),
 					 button->text, QPalette::ButtonText);
 		
 		break;
