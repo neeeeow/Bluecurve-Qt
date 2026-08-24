@@ -555,15 +555,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (pe) {
-
-	case PE_IndicatorHeaderArrow: {
-		// Little hack to always force State_Enabled, per the Qt3 theme
-		QStyleOption optCopy(*opt);
-		optCopy.state |= QStyle::State_Enabled;
-		drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
-		break;
-	}
-		
+	// BUTTONS
+	// -------------------------------------------------------------------
 	case PE_PanelButtonCommand:
 	case PE_PanelButtonBevel:
 	case PE_PanelButtonTool: {
@@ -598,7 +591,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		break;
 	}
-
+		
 	case PE_IndicatorButtonDropDown: {
 		p->save();
 		if (isScaled) {
@@ -656,13 +649,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		break;
 	}
-
+		
 	case PE_FrameButtonBevel:
 	case PE_FrameButtonTool: {
 		drawLightBevel(p, opt, 0, true);
 		break;
 	}
-
+		
 	case PE_FrameDefaultButton: {
 		p->save();
 		if (isScaled) {
@@ -676,12 +669,44 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
+	// CLOSE TAB BUTTON
+	// -------------------------------------------------------------------
+	case PE_IndicatorTabClose: {
+		// Set button options
+		QStyleOptionButton button;
+		button.rect = opt->rect;
+		button.state = opt->state;
+		button.palette = opt->palette;
+		button.features = QStyleOptionButton::Flat;
+
+		// Draw the button
+		drawPrimitive(PE_PanelButtonTool, &button, p, widget);
+
+		// Draw icon
+		const int iconWidth(pixelMetric(QStyle::PM_SmallIconSize, opt, widget));
+		const QIcon icon = QIcon::fromTheme(QStringLiteral("tab-close"));
+		QIcon::Mode mode = QIcon::Normal;
+		QIcon::State state = (opt->state & State_On) ? QIcon::On : QIcon::Off;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		QPixmap pixmap = icon.pixmap(QSize(iconWidth, iconWidth), dpr, mode, state);
+#else
+		QPixmap pixmap = icon.pixmap(widget ? widget->window()->windowHandle() : nullptr, QSize(iconWidth, iconWidth), mode, state);
+#endif
+		if (!(opt->state & State_Enabled))
+			pixmap = pixmap_saturate_and_pixelate(pixmap, 0.8, true);
+		
+	    drawItemPixmap(p, button.rect, Qt::AlignCenter, pixmap);
+		
+		break;
+	}
+		
+	// CHECK/RADIO INDICATORS
+	// -------------------------------------------------------------------
 	case PE_IndicatorMenuCheckMark: {
 		p->save();
-		if (isScaled) {
+		if (isScaled)
 			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
 		if (opt->state & State_Selected)
@@ -703,17 +728,27 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		else if (opt->state & State_NoChange)
 			pix += 2;
 
-		p->drawPixmap(opt->rect.topLeft(), *cdata->checkPix[pix]);
+		QPixmap checkPix = *cdata->checkPix[pix];
+		const int offset = r.width()/2 - checkPix.width()/2;
+
+		p->save();
+		if (isScaled)
+			p->scale(inverseScale, inverseScale);
+		p->drawPixmap(r.x() + offset, r.y() + offset, checkPix);
+		p->restore();
 		break;
 	}
 
 	case PE_IndicatorRadioButton: {
+		QPixmap radio(13,13); // Pixmap for drawing the radio button
+		QPainter radioPainter(&radio);
+
 		int pix = 0;
 		if (opt->state & State_MouseOver) {
 			pix += 4;
-			p->fillRect(r, opt->palette.brush(QPalette::Midlight));
+			radio.fill(opt->palette.brush(QPalette::Midlight).color());
 		} else {
-			p->fillRect(r, opt->palette.brush(QPalette::Window));
+			radio.fill(opt->palette.brush(QPalette::Window).color());
 		}
 
 		if (opt->state & State_Sunken)
@@ -721,24 +756,36 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (opt->state & State_On)
 			pix += 1;
 		
-		p->drawPixmap(opt->rect.topLeft(), *cdata->radioPix[pix]);
+		radioPainter.drawPixmap(0,0, *cdata->radioPix[pix]);
+		radioPainter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+		radioPainter.drawPixmap(0,0, *cdata->radioMask);
+		radioPainter.end();
 		
+		p->save();
+		if (isScaled)
+			p->scale(inverseScale, inverseScale);
+
+		int offset = r.width() / 2 - radio.width() / 2;
+		
+		p->drawPixmap(r.x() + offset, r.y() + offset, radio);
+		p->restore();
 		break;			
 	}
 
+	// SEPARATORS AND HANDLES
+	// -------------------------------------------------------------------
 	case PE_IndicatorToolBarHandle: {
+		// Background fill
+		p->fillRect(opt->rect, opt->palette.button().color());		
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
 			p->translate(0.5, 0.5);
 		}
-		QString title;
 		QStyle::State state = opt->state;
 		state |= State_Raised;
 
 		if (state & State_Horizontal) {
-			p->fillRect(r, opt->palette.button().color());
-
 			int xx = r.left() + (r.width() - 4) / 2;
 			int yy = r.top() + 3;
 			int nLines = (r.height() - 6) / 5;
@@ -750,8 +797,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 				p->drawLine(xx, yy + 4, xx + 3, yy + 1);
 			}			
 		} else {
-			p->fillRect(r, opt->palette.button().color());
-
 			int xx = r.left() + 3;
 			int yy = r.top() + (r.height() - 4) / 2;
 			int nLines = (r.width() - 5) / 4;
@@ -805,10 +850,18 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
-	case PE_PanelLineEdit: {
-		drawTextRect(p, opt, &opt->palette.base());
+	// FRAMES AND PANELS
+	// -------------------------------------------------------------------
+	case PE_Frame:
+	case PE_FrameWindow:
+	case PE_FrameMenu: {
+		QStyleOption optCopy(*opt);
+		if ( ! (optCopy.state & State_Sunken ) )
+			optCopy.state |= State_Raised;
+			
+		drawLightBevel(p, &optCopy);
 		break;
-	}		
+	}	   		
 
 	case PE_FrameTabWidget: {
 		p->save();
@@ -865,15 +918,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		break;
 	}
-		
-	case PE_Frame:
-	case PE_FrameWindow:
-	case PE_FrameMenu: {
-		QStyleOption optCopy(*opt);
-		if ( ! (optCopy.state & State_Sunken ) )
-			optCopy.state |= State_Raised;
-			
-		drawLightBevel(p, &optCopy);
+
+	case PE_PanelLineEdit: {
+		drawTextRect(p, opt, &opt->palette.base());
 		break;
 	}
 
@@ -885,7 +932,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_FrameDockWidget:
 	case PE_PanelMenuBar: {
 		p->fillRect(opt->rect, opt->palette.button().color());
-
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
@@ -894,6 +940,24 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		p->setPen(cdata->shades[3]);
 		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+
+		p->restore();
+		
+		break;
+	}
+
+	case PE_PanelStatusBar: {
+		p->fillRect(opt->rect, opt->palette.button().color());
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
+		p->setPen(cdata->shades[3]);
+		p->drawLine(r.left(), r.top(), r.right(), r.top());
+		p->setPen(cdata->shades[0]);
+	    p->drawLine(r.left(), r.top()+1, r.right(), r.top()+1);
 
 		p->restore();
 		
@@ -940,16 +1004,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
-	case PE_IndicatorProgressChunk: {
-		drawGradientBox(p, opt, cdata, false, 0.92,1.66);
-		break;
-	}
-
+	// ARROWS
+	// -------------------------------------------------------------------
 	case PE_IndicatorArrowUp:
 	case PE_IndicatorArrowDown:
 	case PE_IndicatorArrowRight:
 	case PE_IndicatorArrowLeft: {
-
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
@@ -957,20 +1017,18 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		}
 		
 		// get button geometry
-		// add 1px of padding to make room for arrow shadow
-		int x = r.x() + 1;
-		int y = r.y() + 1;
-		int width = r.width() - 2;
-		int height = r.height() - 2;
+		// add 1px of margin to make room for arrow shadow
+		int x,y,width,height;
+		r.adjusted(1,1,-1,-1).getRect(&x, &y, &width, &height);
 
 		calculate_arrow_geometry(pe, x, y, width, height);
 
 		if ( opt->state & State_Enabled )
-			p->setPen( opt->state & State_Selected ? opt->palette.highlightedText().color() : opt->palette.buttonText().color());
+			p->setPen( opt->state & State_Selected ? opt->palette.highlightedText().color() : cdata->shades[7]);
 		else {
 			p->setPen(Qt::white);
 			drawArrow(p, pe, x+1, y+1, width, height);
-			p->setPen(cdata->shades[7]);
+			p->setPen(opt->palette.text().color());
 		}
 
 		drawArrow(p, pe, x, y, width, height);
@@ -979,7 +1037,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		break;
 	}
-
+	case PE_IndicatorHeaderArrow: {
+		// Little hack to always force State_Enabled, per the Qt3 theme
+		QStyleOption optCopy(*opt);
+		optCopy.state |= QStyle::State_Enabled;
+		drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
+		break;
+	}
 	case PE_IndicatorSpinUp:
 	case PE_IndicatorSpinDown: {
 		QStyleOption optCopy(*opt);
@@ -993,39 +1057,10 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 
-	case PE_PanelStatusBar: {
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		
-		p->setPen(cdata->shades[3]);
-		p->drawLine(r.left(), r.top(), r.right(), r.top());
-		p->setPen(cdata->shades[0]);
-	    p->drawLine(r.left(), r.top()+1, r.right(), r.top()+1);
-
-		p->restore();
-		
-		break;
-	}
-
-	case PE_IndicatorTabClose: {
-		// Set button options
-		QStyleOptionButton button;
-		button.rect = opt->rect;
-		button.state = opt->state;
-		button.palette = opt->palette;
-		button.features = QStyleOptionButton::Flat;
-
-		// Draw the button
-		drawPrimitive(PE_PanelButtonTool, &button, p, widget);
-
-		// Draw icon
-		const int iconWidth(pixelMetric(QStyle::PM_SmallIconSize, opt, widget));
-		const QPixmap pixmap = QIcon::fromTheme(QStringLiteral("tab-close")).pixmap(iconWidth, iconWidth);
-	    drawItemPixmap(p, button.rect, Qt::AlignCenter, pixmap);
-		
+	// PROGRESS CHUNK
+	// -------------------------------------------------------------------
+	case PE_IndicatorProgressChunk: {
+		drawGradientBox(p, opt, cdata, false, 0.92,1.66);
 		break;
 	}
 		
@@ -1655,26 +1690,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 
 	case CE_CheckBox:
 	case CE_RadioButton: {
-		if (opt->state & State_MouseOver) { // Highlight area when hovered
-			QRegion r(opt->rect);
-			r -= subElementRect(SE_CheckBoxIndicator, opt, widget);
-			p->setClipRegion(r);
+		if (opt->state & State_MouseOver)
 			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
-			p->setClipping(false);
-		}
-
 		QCommonStyle::drawControl(control, opt, p, widget);
-		break;
-	}
-
-	case CE_CheckBoxLabel:
-	case CE_RadioButtonLabel: {
-		const QStyleOptionButton *checkboxOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
-
-		int alignment = QGuiApplication::isRightToLeft() ? Qt::AlignRight : Qt::AlignLeft;
-		drawItemText(p, opt->rect, alignment | Qt::AlignVCenter | Qt::TextShowMnemonic,
-					 opt->palette, opt->state & State_Enabled, checkboxOpt->text);	
-		
 		break;
 	}
 
