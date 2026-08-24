@@ -562,11 +562,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_PanelButtonTool: {
 		const QBrush *fill;
 
-		if (opt->state & QStyle::State_Sunken)
+		if (opt->state & State_Sunken)
 			fill = &opt->palette.brush(QPalette::Mid);
-		else if (opt->state & QStyle::State_MouseOver)
+		else if (opt->state & State_MouseOver)
 			fill = &opt->palette.brush(QPalette::Midlight);
-		else if (opt->state & QStyle::State_On)
+		else if (opt->state & State_On)
 			fill = &opt->palette.brush(QPalette::Mid);
 		else { // flat buttons should never be filled in
 			const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
@@ -601,15 +601,15 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		
 		QBrush fill;
 		bool sunken =
-			(opt->state & (QStyle::State_On | QStyle::State_Sunken));
+			(opt->state & (State_On | State_Sunken));
 		QRect br = r;
 
-		if (opt->state & QStyle::State_Sunken)
+		if (opt->state & State_Sunken)
 			fill = opt->palette.brush(QPalette::Mid);
-		else if (opt->state & QStyle::State_MouseOver)
+		else if (opt->state & State_MouseOver)
 			fill = opt->palette.brush(QPalette::Midlight);
 		else
-			fill = (opt->state & (QStyle::State_On | QStyle::State_Open)) ? opt->palette.brush(QPalette::Mid)
+			fill = (opt->state & (State_On | State_Open)) ? opt->palette.brush(QPalette::Mid)
 				: opt->palette.brush(QPalette::Button); 
 
 		p->setPen(sunken ? cdata->shades[6] : cdata->shades[4]);
@@ -619,8 +619,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		p->drawLine(r.topRight(),	r.bottomRight());
 		p->drawLine(r.bottomRight(), r.bottomLeft());
 
-		if (opt->state & (QStyle::State_On |
-						  QStyle::State_Sunken | QStyle::State_Raised)) {
+		if (opt->state & (State_On |
+						  State_Sunken | State_Raised)) {
 			// button bevel
 			p->setPen(sunken ? Qt::white : cdata->shades[2]);
 			p->drawLine(r.x() + r.width() - 2, r.y() + 2,
@@ -1040,7 +1040,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorHeaderArrow: {
 		// Little hack to always force State_Enabled, per the Qt3 theme
 		QStyleOption optCopy(*opt);
-		optCopy.state |= QStyle::State_Enabled;
+		optCopy.state |= State_Enabled;
 		drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
 		break;
 	}
@@ -1089,7 +1089,197 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
-		/* CE_PushButtonLabel and CE_ToolButtonLabel adapted from QCommonStyle */
+	// CHECK/RADIO
+	// -------------------------------------------------------------------
+	case CE_CheckBox:
+	case CE_RadioButton: {
+		if (opt->state & State_MouseOver) // draw the highlight if hovered, and then pass on to QCommonStyle
+			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
+		QCommonStyle::drawControl(control, opt, p, widget);
+		break;
+	}
+
+	// HEADER SECTION
+	// -------------------------------------------------------------------		
+	case CE_HeaderSection: {
+		QStyle::State state = opt->state;
+		if (!(state & (State_Sunken | State_Raised)))
+			state |= State_Raised;
+
+		QStyleOption optCopy(*opt);
+        optCopy.state = state;
+
+        drawLightBevel(p, &optCopy, &opt->palette.brush(QPalette::Button)); 
+		
+		break;
+	}
+
+	// TOOLBAR
+    // -------------------------------------------------------------------	
+	case CE_ToolBar: {		
+		p->fillRect(opt->rect, opt->palette.button());
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
+		p->setPen(cdata->shades[0]);
+		p->drawLine(r.left(), r.top(), r.right(), r.top());
+		p->setPen(cdata->shades[3]);
+		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+
+		p->restore();
+		
+		break;
+	}
+
+	// SPLITTER
+	// -------------------------------------------------------------------
+	case CE_Splitter: {
+		if (opt->state & State_MouseOver)
+			p->fillRect(opt->rect, opt->palette.midlight());
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
+		if (opt->state & State_Horizontal) {
+			int y_mid = r.center().y()+2;
+			for (int i=0; i< 21; i=i+5) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(r.x()+1, y_mid-10+i, r.right()-1, y_mid-10+i-3);
+				p->setPen(Qt::white);
+				p->drawLine(r.x()+1, y_mid-10+i+1, r.right()-1, y_mid-10+i-2);
+			}
+		} else {
+			int x_mid = r.center().x()+2;
+			for (int i=0; i< 21; i=i+5) {
+				p->setPen(cdata->shades[5]);
+				p->drawLine(x_mid-10+i+3, r.y()+1, x_mid-10+i, r.bottom()-1);
+				p->setPen(Qt::white);
+				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
+			}
+		}
+
+		p->restore();
+
+		break;
+	}
+
+	// SCROLLBAR
+	// -------------------------------------------------------------------
+	case CE_ScrollBarAddLine:
+	case CE_ScrollBarSubLine: {
+		// Highlight on mouse over
+		QStyleOption optCopy(*opt);
+	    optCopy.state = opt->state | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
+		drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
+
+		PrimitiveElement pe;
+		if ((control == CE_ScrollBarAddLine) && (opt->state & State_Horizontal)) {
+			pe = PE_IndicatorArrowRight;
+		} else if (control == CE_ScrollBarAddLine) {
+			pe = PE_IndicatorArrowDown;
+		} else if (opt->state & State_Horizontal) {
+			pe = PE_IndicatorArrowLeft;
+		} else {
+			pe = PE_IndicatorArrowUp;
+		}
+
+		QStyleOption arrowOpt;
+		arrowOpt.palette = opt->palette;
+		arrowOpt.state = opt->state & ~State_MouseOver;
+		arrowOpt.rect = opt->rect.adjusted(3,3,-3,-3);
+	    drawPrimitive(pe, &arrowOpt, p, widget);
+	  
+		break;
+	}
+
+	case CE_ScrollBarSubPage:
+	case CE_ScrollBarAddPage: {
+		p->fillRect(opt->rect, cdata->shades[3]);
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+		
+		p->setPen(cdata->shades[5]);
+		if (opt->state & State_Horizontal) {
+			p->drawLine(r.left(), r.top(), r.right(), r.top());
+			p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+		} else {
+			p->drawLine(r.left(), r.top(), r.left(), r.bottom());
+			p->drawLine(r.right(), r.top(), r.right(), r.bottom());
+		}
+
+		p->restore();
+		
+		break;
+	}
+
+	case CE_ScrollBarSlider: {
+		int x1, y1;
+
+		// Highlight on mouse over
+		QStyleOption optCopy(*opt);
+	    optCopy.state = (opt->state & ~State_Sunken) | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
+	    drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
+
+		if (opt->state & State_Horizontal && opt->rect.width() < 31)
+			break;
+		if (!(opt->state & State_Horizontal) && opt->rect.height() < 31)
+			break;
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+
+		// Scrollbar diagonal handle
+		p->setPen(cdata->shades[5]);
+		if (opt->state & State_Horizontal) {
+			x1 = (r.left() + r.right()) / 2 - 8;
+			y1 = ((r.top() + r.bottom()) - 6) / 2;
+			p->drawLine(x1 + 5, y1, x1, y1 + 5);
+			p->drawLine(x1 + 5 + 5, y1,	x1 + 5, y1 + 5);
+			p->drawLine(x1 + 5 + 5*2, y1, x1 + 5*2, y1 + 5);
+		} else {
+			x1 = ((r.left() + r.right()) - 6) / 2;
+			y1 = (r.top() + r.bottom()) / 2 - 8;
+			p->drawLine(x1 + 5, y1,	x1, y1 + 5);
+			p->drawLine(x1 + 5, y1 + 5,	x1, y1 + 5 + 5);
+			p->drawLine(x1 + 5, y1 + 5*2, x1, y1 + 5 + 5*2);
+		}
+
+		p->setPen(Qt::white);
+		if (opt->state & State_Horizontal) {
+			x1 = (r.left() + r.right()) / 2 - 8;
+			y1 = ((r.top() + r.bottom()) - 6) / 2;
+			p->drawLine(x1 + 5, y1+1, x1 + 1, y1 + 5);
+			p->drawLine(x1 + 5 + 5, y1 + 1,	x1 + 1 + 5, y1 + 5);
+			p->drawLine(x1 + 5 + 5*2, y1 + 1, x1 + 1 + 5*2, y1 + 5);
+		} else {
+			x1 = ((r.left() + r.right()) - 6) / 2;
+			y1 = (r.top() + r.bottom()) / 2 - 8;
+			p->drawLine(x1 + 5, y1 + 1,	x1 + 1, y1 + 5);
+			p->drawLine(x1 + 5, y1 + 1 + 5,	x1 + 1, y1 + 5 + 5);
+			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
+		}
+
+		p->restore();
+		
+		break;
+	}
+		
+	// BUTTON LABELS (adopted from QCommonStyle)
+	// -------------------------------------------------------------------
 	case CE_PushButtonLabel: {
 		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
 		if (!button)
@@ -1262,7 +1452,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		
 		break;
 	}
-		
+
+	// TABS
+	// -------------------------------------------------------------------
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
 		if (!tabOpt) return;
@@ -1444,6 +1636,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
+	// MENU/MENUBAR ITEMS
+	// -------------------------------------------------------------------
 	case CE_MenuItem: {
 		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
 		if (!miOpt)
@@ -1631,6 +1825,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
+	// PROGRESS BAR
+	// -------------------------------------------------------------------
 	case CE_ProgressBarGroove: {
 		p->save();
 		if (isScaled) {
@@ -1686,178 +1882,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		drawGradientBox(p, &optCopy, cdata, false, 0.92, 1.66);
 		
 		break;
-	}
+	}	
 
-	case CE_CheckBox:
-	case CE_RadioButton: {
-		if (opt->state & State_MouseOver)
-			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
-		QCommonStyle::drawControl(control, opt, p, widget);
-		break;
-	}
-
-	case CE_HeaderSection: {
-		const QBrush *fill;
-		QStyle::State state = opt->state;
-		if (!(state & (QStyle::State_Sunken | QStyle::State_Raised)))
-			state |= QStyle::State_Raised;
-
-		if (state & State_On) {
-			if (state & State_Sunken)
-				fill = &opt->palette.brush(QPalette::Mid);
-			else
-				fill = &opt->palette.brush(QPalette::Midlight);
-		} else {
-			fill = &opt->palette.brush(QPalette::Button);
-		}
-
-		QStyleOption optCopy(*opt);
-        optCopy.state = state;
-
-        drawLightBevel(p, &optCopy, fill); 
-		
-		break;
-	}
-
-	case CE_Splitter: {
-		if (opt->state & State_MouseOver)
-			p->fillRect(opt->rect, opt->palette.midlight());
-
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		
-		if (opt->state & State_Horizontal) {
-			int y_mid = r.center().y()+2;
-			for (int i=0; i< 21; i=i+5) {
-				p->setPen(cdata->shades[5]);
-				p->drawLine(r.x()+1, y_mid-10+i, r.right()-1, y_mid-10+i-3);
-				p->setPen(Qt::white);
-				p->drawLine(r.x()+1, y_mid-10+i+1, r.right()-1, y_mid-10+i-2);
-			}
-		} else {
-			int x_mid = r.center().x()+2;
-			for (int i=0; i< 21; i=i+5) {
-				p->setPen(cdata->shades[5]);
-				p->drawLine(x_mid-10+i+3, r.y()+1, x_mid-10+i, r.bottom()-1);
-				p->setPen(Qt::white);
-				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
-			}
-		}
-
-		p->restore();
-
-		break;
-	}
-
-	case CE_ScrollBarAddLine:
-	case CE_ScrollBarSubLine: {
-		// Highlight on mouse over
-		QStyleOption optCopy(*opt);
-	    optCopy.state = opt->state | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
-		drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
-
-		PrimitiveElement pe;
-
-		if ((control == CE_ScrollBarAddLine) && (opt->state & State_Horizontal)) {
-			pe = PE_IndicatorArrowRight;
-		} else if (control == CE_ScrollBarAddLine) {
-			pe = PE_IndicatorArrowDown;
-		} else if (opt->state & State_Horizontal) {
-			pe = PE_IndicatorArrowLeft;
-		} else {
-			pe = PE_IndicatorArrowUp;
-		}
-
-		QStyleOption arrowOpt(*opt);
-		arrowOpt.state = opt->state & ~State_MouseOver;
-		arrowOpt.rect = opt->rect.adjusted(3,3,-3,-3);
-	    drawPrimitive(pe, &arrowOpt, p, widget);
-	  
-		break;
-	}
-
-	case CE_ScrollBarSubPage:
-	case CE_ScrollBarAddPage: {
-		p->fillRect(opt->rect, cdata->shades[3]);
-
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		
-		p->setPen(cdata->shades[5]);
-		if (opt->state & State_Horizontal) {
-			p->drawLine(r.left(), r.top(), r.right(), r.top());
-			p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
-		} else {
-			p->drawLine(r.left(), r.top(), r.left(), r.bottom());
-			p->drawLine(r.right(), r.top(), r.right(), r.bottom());
-		}
-
-		p->restore();
-		
-		break;
-	}
-
-	case CE_ScrollBarSlider: {
-		int x1, y1;
-
-		// Highlight on mouse over
-		QStyleOption optCopy(*opt);
-	    optCopy.state = (opt->state & ~State_Sunken) | ((opt->state & State_Enabled) ? State_Raised : QStyle::State());
-	    drawLightBevel(p, &optCopy, &opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button), true);
-
-		if (opt->state & State_Horizontal && opt->rect.width() < 31)
-			break;
-		if (!(opt->state & State_Horizontal) && opt->rect.height() < 31)
-			break;
-
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-
-		// Scrollbar diagonal handle
-		p->setPen(cdata->shades[5]);
-		if (opt->state & State_Horizontal) {
-			x1 = (r.left() + r.right()) / 2 - 8;
-			y1 = ((r.top() + r.bottom()) - 6) / 2;
-			p->drawLine(x1 + 5, y1, x1, y1 + 5);
-			p->drawLine(x1 + 5 + 5, y1,	x1 + 5, y1 + 5);
-			p->drawLine(x1 + 5 + 5*2, y1, x1 + 5*2, y1 + 5);
-		} else {
-			x1 = ((r.left() + r.right()) - 6) / 2;
-			y1 = (r.top() + r.bottom()) / 2 - 8;
-			p->drawLine(x1 + 5, y1,	x1, y1 + 5);
-			p->drawLine(x1 + 5, y1 + 5,	x1, y1 + 5 + 5);
-			p->drawLine(x1 + 5, y1 + 5*2, x1, y1 + 5 + 5*2);
-		}
-
-		p->setPen(Qt::white);
-		if (opt->state & State_Horizontal) {
-			x1 = (r.left() + r.right()) / 2 - 8;
-			y1 = ((r.top() + r.bottom()) - 6) / 2;
-			p->drawLine(x1 + 5, y1+1, x1 + 1, y1 + 5);
-			p->drawLine(x1 + 5 + 5, y1 + 1,	x1 + 1 + 5, y1 + 5);
-			p->drawLine(x1 + 5 + 5*2, y1 + 1, x1 + 1 + 5*2, y1 + 5);
-		} else {
-			x1 = ((r.left() + r.right()) - 6) / 2;
-			y1 = (r.top() + r.bottom()) / 2 - 8;
-			p->drawLine(x1 + 5, y1 + 1,	x1 + 1, y1 + 5);
-			p->drawLine(x1 + 5, y1 + 1 + 5,	x1 + 1, y1 + 5 + 5);
-			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
-		}
-
-		p->restore();
-		
-		break;
-	}
-
+	// RESIZE GRIP (adopted from Bluecurve GTK+2.0 theme engine)
+	// -------------------------------------------------------------------	
 	case CE_SizeGrip: {
 		const QStyleOptionSizeGrip *grip = qstyleoption_cast<const QStyleOptionSizeGrip *>(opt);
 		if (!grip)
@@ -1989,25 +2017,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 
 		p->restore();
-		break;
-	}
-
-	case CE_ToolBar: {		
-		p->fillRect(opt->rect, opt->palette.button());
-
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		
-		p->setPen(cdata->shades[0]);
-		p->drawLine(r.left(), r.top(), r.right(), r.top());
-		p->setPen(cdata->shades[3]);
-		p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
-
-		p->restore();
-		
 		break;
 	}
 		
