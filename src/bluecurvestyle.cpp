@@ -563,14 +563,14 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		const QBrush *fill;
 
 		if (opt->state & State_Sunken)
-			fill = &opt->palette.brush(QPalette::Mid);
+			fill = &opt->palette.mid();
 		else if (opt->state & State_MouseOver)
-			fill = &opt->palette.brush(QPalette::Midlight);
+			fill = &opt->palette.midlight();
 		else if (opt->state & State_On)
-			fill = &opt->palette.brush(QPalette::Mid);
+			fill = &opt->palette.mid();
 		else { // flat buttons should never be filled in
 			const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
-			fill = (button && (button->features & QStyleOptionButton::Flat)) ? 0 : &opt->palette.brush(QPalette::Button);
+			fill = (button && (button->features & QStyleOptionButton::Flat)) ? 0 : &opt->palette.button();
 		}
 
 		if (fill) // buttons with no fill should have no border
@@ -605,12 +605,12 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		QRect br = r;
 
 		if (opt->state & State_Sunken)
-			fill = opt->palette.brush(QPalette::Mid);
+			fill = opt->palette.mid();
 		else if (opt->state & State_MouseOver)
-			fill = opt->palette.brush(QPalette::Midlight);
+			fill = opt->palette.midlight();
 		else
-			fill = (opt->state & (State_On | State_Open)) ? opt->palette.brush(QPalette::Mid)
-				: opt->palette.brush(QPalette::Button); 
+			fill = (opt->state & (State_On | State_Open)) ? opt->palette.mid()
+				: opt->palette.button(); 
 
 		p->setPen(sunken ? cdata->shades[6] : cdata->shades[4]);
 		p->drawLine(r.topLeft(), r.bottomLeft());
@@ -776,7 +776,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	// -------------------------------------------------------------------
 	case PE_IndicatorToolBarHandle: {
 		// Background fill
-		p->fillRect(opt->rect, opt->palette.button().color());		
+		p->fillRect(opt->rect, opt->palette.button());		
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
@@ -925,13 +925,13 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_PanelMenu: {
-		p->fillRect(opt->rect, opt->palette.window().color());
+		p->fillRect(opt->rect, opt->palette.window());
 		break;
 	}
 
 	case PE_FrameDockWidget:
 	case PE_PanelMenuBar: {
-		p->fillRect(opt->rect, opt->palette.button().color());
+		p->fillRect(opt->rect, opt->palette.button());
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
@@ -947,7 +947,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}
 
 	case PE_PanelStatusBar: {
-		p->fillRect(opt->rect, opt->palette.button().color());
+		p->fillRect(opt->rect, opt->palette.button());
 		p->save();
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
@@ -1094,7 +1094,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	case CE_CheckBox:
 	case CE_RadioButton: {
 		if (opt->state & State_MouseOver) // draw the highlight if hovered, and then pass on to QCommonStyle
-			p->fillRect(opt->rect, opt->palette.brush(QPalette::Midlight));
+			p->fillRect(opt->rect, opt->palette.midlight());
 		QCommonStyle::drawControl(control, opt, p, widget);
 		break;
 	}
@@ -1109,7 +1109,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		QStyleOption optCopy(*opt);
         optCopy.state = state;
 
-        drawLightBevel(p, &optCopy, &opt->palette.brush(QPalette::Button)); 
+        drawLightBevel(p, &optCopy, &opt->palette.button()); 
 		
 		break;
 	}
@@ -1363,9 +1363,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			if (!proxy()->styleHint(SH_UnderlineShortcut, opt, widget))
 				alignment |= Qt::TextHideMnemonic;
 			p->setFont(toolbutton->font);
-			drawItemText(p, rect, alignment, toolbutton->palette,
-						 opt->state & State_Enabled, toolbutton->text,
-						 QPalette::ButtonText);
+			proxy()->drawItemText(p, rect, alignment, toolbutton->palette,
+								  opt->state & State_Enabled, toolbutton->text,
+								  QPalette::ButtonText);
 		} else {
 
 			auto drawToolArrow = [this, toolbutton, p, widget](const QRect &rect) {
@@ -1388,7 +1388,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				}
 				QStyleOption arrowOpt = *toolbutton;
 				arrowOpt.rect = rect;
-				drawPrimitive(pe, &arrowOpt, p, widget);				
+				proxy()->drawPrimitive(pe, &arrowOpt, p, widget);				
 			};
 			
 			QPixmap pm;
@@ -1423,7 +1423,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 					pr.setHeight(pmSize.height() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
 					tr.adjust(0, pr.height() - 1, 0, -1);
 					if (!hasArrow) {
-					    drawItemPixmap(p, pr, Qt::AlignCenter, pm);
+					    proxy()->drawItemPixmap(p, pr, Qt::AlignCenter, pm);
 					} else {
 						drawToolArrow(pr);
 					}
@@ -1432,20 +1432,20 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 					pr.setWidth(pmSize.width() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
 					tr.adjust(pr.width(), 0, 0, 0);
 					if (!hasArrow) {
-						drawItemPixmap(p, QStyle::visualRect(opt->direction, rect, pr), Qt::AlignCenter, pm);
+						proxy()->drawItemPixmap(p, QStyle::visualRect(opt->direction, rect, pr), Qt::AlignCenter, pm);
 					} else {
 						drawToolArrow(pr);
 					}
 					alignment |= Qt::AlignLeft | Qt::AlignVCenter;
 				}
-				drawItemText(p, QStyle::visualRect(opt->direction, rect, tr), alignment, toolbutton->palette,
-							 toolbutton->state & State_Enabled, toolbutton->text,
-							 QPalette::ButtonText);
+				proxy()->drawItemText(p, QStyle::visualRect(opt->direction, rect, tr), alignment, toolbutton->palette,
+									  toolbutton->state & State_Enabled, toolbutton->text,
+									  QPalette::ButtonText);
 			} else {
 				if (hasArrow) {
 					drawToolArrow(rect);
 				} else {
-				    drawItemPixmap(p, rect, Qt::AlignCenter, pm);
+				    proxy()->drawItemPixmap(p, rect, Qt::AlignCenter, pm);
 				}
 			}
 		}
