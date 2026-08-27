@@ -47,6 +47,7 @@
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
 #define DARK_FACTOR 0.7
+#define DISABLED_ICON_SATURATION 0.8
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 #define CLAMP_UCHAR(v) ((unsigned char) (CLAMP (((int)v), (int)0, (int)255)))
@@ -1700,6 +1701,57 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		p->restore();
 		
 		break;
+	}
+
+	case CE_ToolBoxTabLabel: {
+		const QStyleOptionToolBox *tb = qstyleoption_cast<const QStyleOptionToolBox *>(opt);
+		if (!tb)
+			break;
+
+		bool enabled = tb->state & State_Enabled;
+		bool selected = tb->state & State_Selected;
+		int iconExtent = proxy()->pixelMetric(QStyle::PM_SmallIconSize, tb, widget);
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+		QPixmap pm = tb->icon.pixmap(QSize(iconExtent,iconExtent), dpr, QIcon::Normal, selected ? QIcon::On : QIcon::Off);
+#else
+		QPixmap pm = tb->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
+									 QSize(iconExtent,iconExtent), QIcon::Normal, selected ? QIcon::On : QIcon::Off);
+#endif
+		if (!enabled)
+			pm = pixmap_saturate_and_pixelate(pm, DISABLED_ICON_SATURATION, true);
+
+		QRect cr = proxy()->subElementRect(QStyle::SE_ToolBoxTabContents, tb, widget);
+		QRect tr, ir;
+		int ih = 0;
+		if (pm.isNull()) {
+			tr = cr;
+			tr.adjust(4, 0, -8, 0);
+		} else {
+			int iw = pm.width() / pm.devicePixelRatio() + 4;
+			ih = pm.height()/ pm.devicePixelRatio();
+			ir = QRect(cr.left() + 4, cr.top(), iw + 2, ih);
+			tr = QRect(ir.right(), cr.top(), cr.width() - ir.right() - 4, cr.height());
+		}
+
+		QString txt = tb->fontMetrics.elidedText(tb->text, Qt::ElideRight, tr.width());
+		
+		if (ih)
+			p->drawPixmap(ir.left(), (tb->rect.height() - ih) / 2, pm);
+
+		int alignment = Qt::AlignLeft | Qt::AlignVCenter | Qt::TextShowMnemonic;
+		if (!proxy()->styleHint(QStyle::SH_UnderlineShortcut, tb, widget))
+			alignment |= Qt::TextHideMnemonic;
+		proxy()->drawItemText(p, tr, alignment, tb->palette, enabled, txt, QPalette::ButtonText);
+
+		if (!txt.isEmpty() && opt->state & State_HasFocus) {
+			QStyleOptionFocusRect opt;
+			opt.rect = tr;
+			opt.palette = tb->palette;
+			opt.state = QStyle::State_None;
+			proxy()->drawPrimitive(QStyle::PE_FrameFocusRect, &opt, p, widget);
+		}
+		break;		
 	}
 
 	// MENU/MENUBAR ITEMS
