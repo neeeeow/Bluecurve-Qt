@@ -864,22 +864,11 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	}	   		
 
 	case PE_FrameTabWidget: {
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		p->setPen(cdata->shades[6]);
-		p->drawLine(r.left(),r.top(),r.left(),r.bottom());
-		p->drawLine(r.left(),r.bottom(),r.right(),r.bottom());
-		p->drawLine(r.right(),r.bottom(),r.right(),r.top());
-		p->drawLine(r.left(),r.top(),r.right(),r.top());
-		p->setPen(opt->palette.light().color());
-		p->drawLine(r.left()+1,r.top(),r.left()+1,r.bottom()-1);
-		p->drawLine(r.left()+1,r.bottom()-1,r.right()-1,r.bottom()-1);
-		p->drawLine(r.right()-1,r.bottom()-1,r.right()-1,r.top()+1);
-		p->drawLine(r.left(),r.top()+1,r.right()-1,r.top()+1);
-		p->restore();
+		QStyleOption optCopy(*opt);
+		if ( ! (optCopy.state & State_Sunken ) )
+			optCopy.state |= State_Raised;
+			
+		drawLightBevel(p, &optCopy, nullptr, true);
 		break;        
 	}		
 
@@ -1453,7 +1442,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
-	// TABS
+	// TABBAR TABS
 	// -------------------------------------------------------------------
 	case CE_TabBarTabShape: {
 		const QStyleOptionTab *tb = qstyleoption_cast<const QStyleOptionTab *>(opt);
@@ -1620,7 +1609,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			|| tab->shape == QTabBar::TriangularWest;
 
 		int alignment = Qt::AlignCenter | Qt::TextShowMnemonic;
-		if (!styleHint(SH_UnderlineShortcut, opt, widget))
+		if (!proxy()->styleHint(SH_UnderlineShortcut, opt, widget))
 			alignment |= Qt::TextHideMnemonic;
 
 		if (verticalTabs) {
