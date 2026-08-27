@@ -1667,6 +1667,41 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
+	// TOOLBOX TABS
+	// -------------------------------------------------------------------
+	case CE_ToolBoxTabShape: {
+		// Use the same background as a regular tab
+		bool selected = opt->state & State_Selected;
+		
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+			
+		// Tab border
+		p->setPen(cdata->shades[6]);
+		p->drawLine(r.left(), r.top(), r.right(), r.top()); // top
+		p->drawLine(r.left(), r.top(), r.left(), r.bottom()); // left
+		p->drawLine(r.right(), r.top(), r.right(), r.bottom()); // right
+
+		// Inner shading
+		p->setPen(Qt::white);
+		p->drawLine(r.left() + 1, r.top() + 1, r.right() - 1, r.top() + 1); // top
+		p->drawLine(r.left() + 1, r.top() + 1, r.left() + 1, r.bottom()); // left
+		p->setPen(cdata->shades[2]);
+		p->drawLine(r.right() - 1, r.top() + 1, r.right() -1, r.bottom()); // right
+
+		// Fill rectangle
+		QRect fr = r.adjusted(2, 2, -2, 0);
+		if (isScaled)
+			p->translate(-0.5,-0.5);
+		p->fillRect(fr, selected ? opt->palette.button() : opt->palette.mid());
+		p->restore();
+		
+		break;
+	}
+
 	// MENU/MENUBAR ITEMS
 	// -------------------------------------------------------------------
 	case CE_MenuItem: {
