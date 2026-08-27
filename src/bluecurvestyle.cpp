@@ -1456,111 +1456,153 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	// TABS
 	// -------------------------------------------------------------------
 	case CE_TabBarTabShape: {
-		const QStyleOptionTab *tabOpt = qstyleoption_cast<const QStyleOptionTab *>(opt);
-		if (!tabOpt) return;
-		
-		bool below = false;
-
-		QRect tr, fr;
+		const QStyleOptionTab *tb = qstyleoption_cast<const QStyleOptionTab *>(opt);
+		if (!tb)
+			break;
+		QTabBar::Shape tbs = tb->shape;
+		bool selected = tb->state & State_Selected;
+		bool first = tb->position == QStyleOptionTab::Beginning || tb->position == QStyleOptionTab::OnlyOneTab;
+		bool last = tb->position == QStyleOptionTab::End || tb->position == QStyleOptionTab::OnlyOneTab;
+		const int baseOverlap = proxy()->pixelMetric(PM_TabBarBaseOverlap);
+		QRect tr, fr;	
 
 		p->save();
 		if (isScaled) {
-			tr = fr = getScaledRect((opt->rect.left() == 0) ? opt->rect : opt->rect.adjusted(-1, 0, 0, 0), dpr); 
-			
 			p->scale(inverseScale, inverseScale);
 			p->translate(0.5, 0.5);
-		} else {
-			tr = fr = (opt->rect.left() == 0) ? opt->rect : opt->rect.adjusted(-1, 0, 0, 0); 
 		}
 
-		tr.adjust(0, 0,  0, -1); // NB: adjust replaces addCoords
-		fr.adjust(1, 2, -2, -2);
+		switch (tbs) {
+		case QTabBar::RoundedNorth:
+		case QTabBar::TriangularNorth: {
+			// Rect calculations
+			QRect tabRect = tb->rect.adjusted( (selected && !first) ? -1 : 0, !selected ? 1 : 0, !last ? 1 : 0, 0);
+			if (isScaled)
+				tr = getScaledRect(tabRect, dpr);
+			else
+				tr = tabRect;
+			
+			// Tab border
+			p->setPen(cdata->shades[6]);
+			p->drawLine(tr.left(), tr.top(), tr.right(), tr.top()); // top
+			p->drawLine(tr.left(), tr.top(), tr.left(), tr.bottom() - baseOverlap); // left
+			p->drawLine(tr.right(), tr.top(), tr.right(), tr.bottom() - baseOverlap); // right
 
-		if ( tabOpt->shape == QTabBar::RoundedSouth || tabOpt->shape == QTabBar::TriangularSouth) {
-			tr = r; tr.adjust(0, 1, 0, 0);
-			fr = r; fr.adjust(2, 2,-2, -2);
-			below=true;
+			// Inner shading
+			p->setPen(Qt::white);
+			p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1); // top
+			if (selected || first)
+				p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - (selected ? 0 : baseOverlap)); // left
+			p->setPen(cdata->shades[2]);
+			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() -1, tr.bottom() - (selected ? 0 : baseOverlap)); // right
+
+			// Fill rectangle
+			fr = tr.adjusted((selected || first) ? 2 : 1, 2, -2, selected ? 0 : -2);
+			
+			break;
 		}
 
-		if (! (opt->state & State_Selected)) {
-			if (below) {
-				tr.adjust(0, 0, 0, -1);
-				fr.adjust(0, 0, 0, -1);
-			} else {
-				tr.adjust(0, 1, 0, 0);
-				fr.adjust(0, 1, 0, 0);
-			}
+		case QTabBar::RoundedSouth:
+		case QTabBar::TriangularSouth: {
+			// Rect calculations
+			QRect tabRect = tb->rect.adjusted( (selected && !first) ? -1 : 0, 0, !last ? 1 : 0, !selected ? -1 : 0);
+			if (isScaled)
+				tr = getScaledRect(tabRect, dpr);
+			else
+				tr = tabRect;
 			
-			if (tr.left() == 0)
-				fr.adjust(1,0,0,0);
-
+			// Tab border
 			p->setPen(cdata->shades[6]);
-			p->drawRect(tr.adjusted(0,0,-1,-1));
+		    p->drawLine(tr.left(), tr.bottom(), tr.right(), tr.bottom()); // bottom
+			p->drawLine(tr.left(), tr.top() + baseOverlap, tr.left(), tr.bottom()); // left
+			p->drawLine(tr.right(), tr.top() + baseOverlap, tr.right(), tr.bottom()); // right
 
-			if (tr.left() == 0) {
-				if (below)
-					p->drawPoint(tr.left(), tr.top() - 1);
-				else
-					p->drawPoint(tr.left(), tr.bottom() + 1);
-			}
-
-			p->setPen(opt->palette.light().color());
-			if (!below)
-				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1);
-			if (tr.left() == 0)
-				p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - 1);
-
+			// Inner shading
 			p->setPen(cdata->shades[2]);
-			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() - 1);
-			if (below)
-				p->drawLine(tr.left() + 2, tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1);
-
-		} else {
-
-			fr.adjust(1,0,0,below ? 0 : 2); // ensure tab goes over the tab contents
-			if (tr.left() != 0) {
-				// selected tab borders move over to the left by 1px
-				tr.adjust(-1,0,0,0);
-				fr.adjust(-1,0,0,0);
+			p->drawLine(tr.left() + 1, tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1); // bottom
+			p->drawLine(tr.right() - 1, tr.top() + (selected ? 0 : baseOverlap), tr.right() - 1, tr.bottom() - 1); // right
+			if (selected || first) {
+				p->setPen(Qt::white);
+				p->drawLine(tr.left() + 1, tr.top() + (selected ? 0 : baseOverlap), tr.left() + 1, tr.bottom() - 1); // left
 			}
+
+			// Fill rectangle
+			fr = tr.adjusted((selected || first) ? 2 : 1, selected ? 0 : 2, -2, -2);
 			
+			break;
+		}
+
+		case QTabBar::RoundedWest:
+		case QTabBar::TriangularWest: {
+			// Rect calculations
+			QRect tabRect = tb->rect.adjusted(!selected ? 1 : 0, (selected && !first) ? -1 : 0, 0, !last ? 1 : 0);
+			if (isScaled)
+				tr = getScaledRect(tabRect, dpr);
+			else
+				tr = tabRect;
+			
+			// Tab border
 			p->setPen(cdata->shades[6]);
-			if (below) {
-				p->drawLine(tr.left(), tr.bottom() - 1,	tr.left(), tr.top() - 1);
-				p->drawLine(tr.left(), tr.bottom(),	tr.right(), tr.bottom());
-				p->drawLine(tr.right(), tr.top(), tr.right(), tr.bottom() - 1);
-			} else {
-				p->drawLine(tr.left(), tr.bottom() + 1, tr.left(), tr.top() + 1);
-				p->drawLine(tr.left(), tr.top(), tr.right(), tr.top());
-				p->drawLine(tr.right(), tr.top() + 1, tr.right(), tr.bottom());
-			}
+			p->drawLine(tr.left(), tr.top(), tr.left(), tr.bottom()); // left
+			p->drawLine(tr.left(), tr.top(), tr.right() - baseOverlap, tr.top()); // top
+			p->drawLine(tr.left(), tr.bottom(), tr.right() - baseOverlap, tr.bottom()); // bottom
 
-			p->setPen(opt->palette.light().color());
-			if (below) {
-				p->drawLine(tr.left() + 1, tr.bottom() - 1,	tr.left() + 1, tr.top() - 2);
-				p->drawPoint(tr.right(), tr.top() - 1);
-			} else {
-				p->drawLine(tr.left() + 1, tr.bottom() + 2,	tr.left() + 1, tr.top() + 2);
-				if (tr.left() != 0)
-					p->drawPoint(tr.left(), tr.bottom() + 1);
-
-				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 2, tr.top() + 1);
-			}
-
+			// Inner shading
+			p->setPen(Qt::white);
+			p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - 1); // left
+			if (selected || first)
+				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - (selected ? 0 : baseOverlap), tr.top() + 1); // top
 			p->setPen(cdata->shades[2]);
-			if (below) {
-				if (tr.left() != 0)
-					p->drawPoint(tr.left(), tr.top() - 1);
-				p->drawLine(tr.left() + 2, tr.bottom() - 1,	tr.right() - 1, tr.bottom() - 1);
-				p->drawLine(tr.right() - 1, tr.top() - 1, tr.right() - 1, tr.bottom() - 2);
-			} else {
-				p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() + 1);
-			}
-		}		
+			p->drawLine(tr.left() + 1, tr.bottom() - 1, tr.right() - (selected ? 0 : baseOverlap), tr.bottom() - 1); // bottom
 
+			// Fill rectangle
+			fr = tr.adjusted(2, (selected || first) ? 2 : 1, selected ? 0 : -2, -2);
+			
+			break;
+		}
+
+		case QTabBar::RoundedEast:
+		case QTabBar::TriangularEast: {
+			// Rect calculations
+			QRect tabRect = tb->rect.adjusted(0, (selected && !first) ? -1 : 0, !selected ? -1 : 0, !last ? 1 : 0);
+			if (isScaled)
+				tr = getScaledRect(tabRect, dpr);
+			else
+				tr = tabRect;
+			
+			// Tab border
+			p->setPen(cdata->shades[6]);
+			p->drawLine(tr.right(), tr.top(), tr.right(), tr.bottom()); // right
+			p->drawLine(tr.left() + baseOverlap, tr.top(), tr.right(), tr.top()); // top
+			p->drawLine(tr.left() + baseOverlap, tr.bottom(), tr.right(), tr.bottom()); // bottom
+
+			// Inner shading
+			p->setPen(cdata->shades[2]);
+			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() - 1); // right
+			p->drawLine(tr.left() + (selected ? 0 : baseOverlap), tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1); // bottom
+			if (selected || first) {
+				p->setPen(Qt::white);
+				p->drawLine(tr.left() + (selected ? 0 : baseOverlap), tr.top() + 1, tr.right() - 1, tr.top() + 1); // top
+			}
+
+			// Fill rectangle
+			fr = tr.adjusted(selected ? 0 : 2, (selected || first) ? 2 : 1, -2, -2);
+			
+			break;
+		}
+
+		default: {
+			// Should never reach here, but we leave it in case Qt introduces new tab shapes
+			break;
+		}
+			
+		}
+
+		// Apply the fill
 		if (isScaled)
-			p->translate(-0.5, -0.5);
-		p->fillRect(fr, ((opt->state & State_Selected) ? opt->palette.window().color() : cdata->shades[2]));
+			p->translate(-0.5,-0.5);
+		p->fillRect(fr, selected ? tb->palette.button() : tb->palette.mid());
+		
 		p->restore();
 		break;
 	}
