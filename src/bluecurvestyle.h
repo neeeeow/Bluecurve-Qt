@@ -15,6 +15,10 @@ public:
 
 	void polish(QWidget *widget) override;
 
+	void drawItemText(QPainter *painter, const QRect &rect,
+					  int flags, const QPalette &pal, bool enabled,
+					  const QString &text, QPalette::ColorRole textRole = QPalette::NoRole) const override;
+
 	void drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 					   QPainter *p, const QWidget *widget = nullptr) const override;
 

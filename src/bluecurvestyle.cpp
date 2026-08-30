@@ -534,6 +534,35 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 }
 
 void
+BluecurveStyle::drawItemText(QPainter *painter, const QRect &rect, int alignment, const QPalette &pal,
+							 bool enabled, const QString& text, QPalette::ColorRole textRole) const
+{
+	if (text.isEmpty())
+		return;
+	QPen savedPen;
+	if (textRole != QPalette::NoRole) {
+		savedPen = painter->pen();
+		painter->setPen(QPen(pal.brush(textRole), savedPen.widthF()));
+	}
+	if (!enabled) {
+		if (proxy()->styleHint(SH_DitherDisabledText)) {
+			QRect br;
+			painter->drawText(rect, alignment, text, &br);
+			painter->fillRect(br, QBrush(painter->background().color(), Qt::Dense5Pattern));
+			return;
+		} else if (proxy()->styleHint(SH_EtchDisabledText)) {
+			QPen pen = painter->pen();
+			painter->setPen(Qt::white); // Compared to QStyle's default implementation, Bluecurve *always* uses white etching
+			painter->drawText(rect.adjusted(1, 1, 1, 1), alignment, text);
+			painter->setPen(pen);
+		}
+	}
+	painter->drawText(rect, alignment, text);
+	if (textRole != QPalette::NoRole)
+		painter->setPen(savedPen);
+}
+
+void
 BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 							  QPainter *p, const QWidget *widget) const
 {
