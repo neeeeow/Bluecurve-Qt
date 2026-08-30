@@ -1806,7 +1806,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
 		const int arrowHeight = 9;
 		QRect cr(x, y, checkcol, h); // Check mark rect
-		QRect sr(menuitem->rect.right() - arrowWidth - rectPadding, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
+		QRect sr(menuitem->rect.right() + 1 - arrowWidth - rectPadding, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
 		QRect tr(sr.left() - tab - rectPadding, y, tab, h); // tab/accelerator rect
 		QRect ir(cr.right() + rectPadding, y, tr.left() - cr.right() - 2 * rectPadding - x, h); // main text rect
 		if ( reverse ) {
@@ -1849,7 +1849,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			if (active)
 				check.state |= State_On | State_Selected;
 			check.rect = cr;
-			check.palette = opt->palette;
+			check.palette = menuitem->palette;
 			drawPrimitive(PE_IndicatorMenuCheckMark, &check, p, widget);
 		}
 
@@ -1857,21 +1857,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		QStringView s(menuitem->text);
 		if (!s.isEmpty()) {
 			// Colors for drawing text
-			QColor textcolor;
-			QColor embosscolor;
-			if (opt->state & State_Selected) {
-				if (! (opt->state & State_Enabled)) {
-					textcolor = opt->palette.text().color();
-					embosscolor = opt->palette.light().color();
-				} else {
-					textcolor = opt->palette.highlightedText().color();
-					embosscolor = opt->palette.midlight().color().lighter();
-				}
-			} else if (! (opt->state & State_Enabled)) {
-				textcolor = opt->palette.text().color();
-				embosscolor = opt->palette.light().color();
-			} else
-				textcolor = embosscolor = opt->palette.buttonText().color();
+			QColor textcolor = active ? menuitem->palette.highlightedText().color() : menuitem->palette.text().color();
 			p->setPen(textcolor);
 
 			// Set up flags
@@ -1885,7 +1871,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				const QString textToDraw = s.mid(t + 1).toString();
 				int alignFlag = tf | ( reverse ? Qt::AlignLeft : Qt::AlignRight );
 				if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
-					p->setPen(embosscolor);
+					p->setPen(Qt::white);
 					p->drawText(tr.translated(1,1), alignFlag, textToDraw);
 					p->setPen(textcolor);
 				}				
@@ -1896,7 +1882,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			const QString textToDraw = s.left(t).toString();
 			int alignFlag = tf | ( reverse ? Qt::AlignRight : Qt::AlignLeft );
 			if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
-				p->setPen(embosscolor);
+				p->setPen(Qt::white);
 				p->drawText(ir.translated(1,1), alignFlag, textToDraw);
 				p->setPen(textcolor);
 			}				
