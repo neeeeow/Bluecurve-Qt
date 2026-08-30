@@ -42,11 +42,13 @@ public:
 				  QStyleHintReturn *hret = nullptr) const override;
 
 private:
+	// Contains computed shade colors and radio/check pixmaps
 	struct BluecurveColorData {
 		QRgb buttonColor;
 		QRgb spotColor;
 
-		QColor shades[8];
+		QColor btnShades[8]; // Shades computed using button color
+		QColor bgShades[8]; // Shades computed using window color
 		QColor spots[3];
 
 		QPixmap *radioPix[8];
@@ -69,24 +71,26 @@ private:
 	BluecurveColorData *realizeData (const QPalette &palette) const;
 	const BluecurveColorData *lookupData (const QPalette &palette) const;
 
-	void getShade (const QPalette &palette, int shadenr, QColor &res) const;
-
+	// Draws a Bluecurve style text entry rectangle
 	void drawTextRect(QPainter *p, const QStyleOption *opt,
-					  const QBrush *fill = 0) const;
+					  const QBrush *fill = nullptr) const;
 
+	// Draws a raised/sunken Bluecurve style bevel rectangle
 	void drawLightBevel(QPainter *p, const QStyleOption *opt,
-						const QBrush *fill = 0, bool dark = false) const;	
+						const QBrush *fill = nullptr, bool btnPal = false, bool dark = false) const;	
 
+	// Draws a Bluecurve style gradient rectangle
 	void drawGradient(QPainter *p, QRect const &rect, const QPalette &palette,
 					  double shade1, double shade2, bool horiz) const;
-
 	void drawGradientBox(QPainter *p, const QStyleOption *opt,
 						 const BluecurveColorData *cdata, bool horiz,
 						 double shade1, double shade2) const;
 
+	// Adjusts tab rectangle (taken from qwindowsstyle.cpp)
 	void tabLayout(const QStyleOptionTab *opt, const QWidget *widget,
 				   QRect *textRect, QRect *iconRect) const; 
 
+	// Bluecurve GTK+ 2.0 engine arrow drawing functions
 	static void calculate_arrow_geometry(PrimitiveElement pe, int &x, int &y,
 								  int &width, int &height);
 
