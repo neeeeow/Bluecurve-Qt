@@ -1887,37 +1887,26 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		// Draw the text
 		QStringView s(menuitem->text);
 		if (!s.isEmpty()) {
-			// Colors for drawing text
-			QColor textcolor = active ? menuitem->palette.highlightedText().color() : menuitem->palette.buttonText().color();
-			p->setPen(textcolor);
-
-			// Set up flags
+			// Set up text
 			qsizetype t = s.indexOf(u'\t');
 			int tf = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
 			if (!proxy()->styleHint(SH_UnderlineShortcut, menuitem, widget))
 				tf |= Qt::TextHideMnemonic;
+			QPalette::ColorRole textRole = active ? QPalette::HighlightedText : QPalette::ButtonText;
 
 			// draw accelerator/tab-text
 			if (t >= 0) {
 				const QString textToDraw = s.mid(t + 1).toString();
 				int alignFlag = tf | ( reverse ? Qt::AlignLeft : Qt::AlignRight );
-				if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
-					p->setPen(Qt::white);
-					p->drawText(tr.translated(1,1), alignFlag, textToDraw);
-					p->setPen(textcolor);
-				}				
-				p->drawText(tr, alignFlag, textToDraw);
+				proxy()->drawItemText(p, tr, alignFlag, menuitem->palette, enabled,
+									  textToDraw, textRole);
 			}
 
 			// Draw main item text
 			const QString textToDraw = s.left(t).toString();
 			int alignFlag = tf | ( reverse ? Qt::AlignRight : Qt::AlignLeft );
-			if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
-				p->setPen(Qt::white);
-				p->drawText(ir.translated(1,1), alignFlag, textToDraw);
-				p->setPen(textcolor);
-			}				
-			p->drawText(ir, alignFlag, textToDraw);			
+			proxy()->drawItemText(p, ir, alignFlag, menuitem->palette, enabled,
+								  textToDraw, textRole);
 		}
 
 		if (menuitem->menuItemType == QStyleOptionMenuItem::SubMenu) {
