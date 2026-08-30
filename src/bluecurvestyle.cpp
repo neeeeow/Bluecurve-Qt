@@ -1757,24 +1757,24 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	// MENU/MENUBAR ITEMS
 	// -------------------------------------------------------------------
 	case CE_MenuItem: {
-		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
-		if (!miOpt)
+		const QStyleOptionMenuItem *menuitem = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+		if (!menuitem)
 			break;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-		int tab = miOpt->reservedShortcutWidth;
+		int tab = menuitem->reservedShortcutWidth;
 #else
-		int tab = miOpt->tabWidth;
+		int tab = menuitem->tabWidth;
 #endif
-		
-		int maxpmw = miOpt->maxIconWidth;
+		bool enabled = menuitem->state & State_Enabled;
+		bool checked = menuitem->checkType != QStyleOptionMenuItem::NotCheckable
+			? menuitem->checked : false;
+		bool active = menuitem->state & State_Selected;
+		bool reverse = QGuiApplication::isRightToLeft();
 
-		bool checked = miOpt->checkType != QStyleOptionMenuItem::NotCheckable
-			? miOpt->checked : false;
-
-		if ( miOpt && miOpt->menuItemType == QStyleOptionMenuItem::Separator ) {
+		if ( menuitem->menuItemType == QStyleOptionMenuItem::Separator ) {
 			// draw separator
-			p->fillRect(opt->rect, opt->palette.brush(QPalette::Button));
+			p->fillRect(menuitem->rect, menuitem->palette.button());
 
 			p->save();
 			if (isScaled) {
@@ -1784,139 +1784,134 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			
 			p->setPen(cdata->shades[2]);
 			p->drawLine(r.left() + 6, r.top() + 4, r.right() - 6, r.top() + 4);
-			p->setPen(opt->palette.light().color());
+			p->setPen(Qt::white);
 			p->drawLine(r.left() + 6,  r.top() + 5, r.right() - 6, r.top() + 5);
 
 			p->restore();
 			break;
 		}
 
-		if ((opt->state & State_Selected) && (opt->state & State_Enabled)) {
+		// menu background
+		if (enabled && active) {
 			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
 		} else {
 			p->fillRect(opt->rect, opt->palette.brush(QPalette::Button));
 		}
 
-		maxpmw = std::max(maxpmw, 22);
-
-		QRect cr, ir, tr, sr;
-		// check column
-		cr.setRect(opt->rect.left(), opt->rect.top(), maxpmw, opt->rect.height());
-		// submenu indicator column
-		sr.setCoords(opt->rect.right() - 12, opt->rect.top(), opt->rect.right(), opt->rect.bottom());
-		// tab/accelerator column
-		tr.setCoords(opt->rect.right() - tab - 4, opt->rect.top(), opt->rect.right() - 4, opt->rect.bottom());
-		// item column
-		ir.setCoords(cr.right() + 4, opt->rect.top(), tr.right() - 4, opt->rect.bottom());
-
-		bool reverse = QGuiApplication::isRightToLeft();
+		// compute rects
+		int x,y,w,h;
+		menuitem->rect.getRect(&x,&y,&w,&h);
+		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
+		const int rectPadding = 4;
+		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
+		const int arrowHeight = 9;
+		QRect cr(x, y, checkcol, h); // Check mark rect
+		QRect sr(menuitem->rect.right() - arrowWidth - rectPadding, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
+		QRect tr(sr.left() - tab - rectPadding, y, tab, h); // tab/accelerator rect
+		QRect ir(cr.right() + rectPadding, y, tr.left() - cr.right() - 2 * rectPadding - x, h); // main text rect
 		if ( reverse ) {
-			cr = visualRect( opt->direction, opt->rect, cr );
-			sr = visualRect( opt->direction, opt->rect, sr );
-			tr = visualRect( opt->direction, opt->rect, tr );
-			ir = visualRect( opt->direction, opt->rect, ir );
+			cr = visualRect( opt->direction, menuitem->rect, cr );
+			sr = visualRect( opt->direction, menuitem->rect, sr );
+			tr = visualRect( opt->direction, menuitem->rect, tr );
+			ir = visualRect( opt->direction, menuitem->rect, tr );
 		}
 
-		if (!miOpt->icon.isNull()) {
-			if (checked) {
-				// If the menu item is checked and there is an icon, give the icon
-				// a sunken appearance
-				QStyleOption buttonOpt;
-				buttonOpt.rect = cr;
-				buttonOpt.state = opt->state | QStyle::State_On;
-				buttonOpt.state &= ~QStyle::State_Sunken;
-				if ((opt->state & State_Selected) && (opt->state & State_Enabled))
-					buttonOpt.state |= QStyle::State_MouseOver;
-				buttonOpt.palette = opt->palette;
-				drawPrimitive(PE_PanelButtonCommand, &buttonOpt, p, widget);
+		// If the menu item has an icon and is checkable, draw a sunken shaded rect around the icon if checked
+		// If the menu item does not have an icon and is checkable, draw a standard checkmark
+		if (!menuitem->icon.isNull()) {
+			if (checked) { // Draw the sunken background
+				QStyleOption checkFrame;
+				checkFrame.rect = cr;
+				checkFrame.palette = menuitem->palette;
+				checkFrame.state = State_Enabled | State_Sunken;
+				drawLightBevel(p, &checkFrame, active ? &menuitem->palette.midlight() : &menuitem->palette.mid(), true);
 			}
 			
-			// Draw the icon
-			const QIcon::Mode mode = QIcon::Normal;
-			const QSize size = QSize(pixelMetric(PM_SmallIconSize, opt, widget), pixelMetric(PM_SmallIconSize, opt, widget));
-		    const QIcon::State state = checked ? QIcon::On : QIcon::Off;
-			QPixmap pixmap;
+			const auto size = proxy()->pixelMetric(PM_SmallIconSize, opt, widget);
+			const auto state = checked ? QIcon::On : QIcon::Off;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			pixmap = miOpt->icon.pixmap(size, dpr, mode, state);
+			QPixmap pixmap = menuitem->icon.pixmap(QSize(size,size), dpr, QIcon::Normal, state);
 #else
-			pixmap = miOpt->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
-										size, mode, state);
+			QPixmap pixmap = menuitem->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
+												   QSize(size,size), QIcon::Normal, state);
 #endif
-			if (!(opt->state & State_Enabled))
-				pixmap = pixmap_saturate_and_pixelate(pixmap, 0.8, true);
-
+			if (!enabled)
+				pixmap = pixmap_saturate_and_pixelate(pixmap, DISABLED_ICON_SATURATION, true);
 			QRect pmr(QPoint(0, 0), pixmap.size() / pixmap.devicePixelRatio());
 			pmr.moveCenter(cr.center());
-			p->setPen(opt->palette.text().color());
+			p->setPen(menuitem->palette.text().color());
 			p->drawPixmap(pmr.topLeft(), pixmap);
 		} else if (checked) {
-			QStyleOption checkOpt;
-			checkOpt.state = (opt->state & (State_Enabled|State_Selected)) | State_On;
-			checkOpt.rect = cr;
-			checkOpt.palette = opt->palette;
-			drawPrimitive(PE_IndicatorMenuCheckMark, &checkOpt, p, widget);
+			QStyleOption check;
+			check.state = State_None;
+			if (enabled)
+				check.state |= State_Enabled;
+			if (active)
+				check.state |= State_On | State_Selected;
+			check.rect = cr;
+			check.palette = opt->palette;
+			drawPrimitive(PE_IndicatorMenuCheckMark, &check, p, widget);
 		}
-		QColor textcolor;
-		QColor embosscolor;
-		if (opt->state & State_Selected) {
-			if (! (opt->state & State_Enabled)) {
+
+		// Draw the text
+		QStringView s(menuitem->text);
+		if (!s.isEmpty()) {
+			// Colors for drawing text
+			QColor textcolor;
+			QColor embosscolor;
+			if (opt->state & State_Selected) {
+				if (! (opt->state & State_Enabled)) {
+					textcolor = opt->palette.text().color();
+					embosscolor = opt->palette.light().color();
+				} else {
+					textcolor = opt->palette.highlightedText().color();
+					embosscolor = opt->palette.midlight().color().lighter();
+				}
+			} else if (! (opt->state & State_Enabled)) {
 				textcolor = opt->palette.text().color();
 				embosscolor = opt->palette.light().color();
-			} else {
-				textcolor = opt->palette.highlightedText().color();
-				embosscolor = opt->palette.midlight().color().lighter();
-			}
-		} else if (! (opt->state & State_Enabled)) {
-			textcolor = opt->palette.text().color();
-			embosscolor = opt->palette.light().color();
-		} else
-			textcolor = embosscolor = opt->palette.buttonText().color();			
-		p->setPen(textcolor);
+			} else
+				textcolor = embosscolor = opt->palette.buttonText().color();
+			p->setPen(textcolor);
 
-		QString text = miOpt->text;
-		if (! text.isNull()) {
-			int t = (int)text.indexOf('\t');
+			// Set up flags
+			qsizetype t = s.indexOf(u'\t');
+			int tf = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
+			if (!proxy()->styleHint(SH_UnderlineShortcut, menuitem, widget))
+				tf |= Qt::TextHideMnemonic;
 
 			// draw accelerator/tab-text
 			if (t >= 0) {
-				int alignFlag = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
-				alignFlag |= ( reverse ? Qt::AlignLeft : Qt::AlignRight );
-				if (! (opt->state & State_Enabled)) {
+				const QString textToDraw = s.mid(t + 1).toString();
+				int alignFlag = tf | ( reverse ? Qt::AlignLeft : Qt::AlignRight );
+				if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
 					p->setPen(embosscolor);
-					tr.translate(1, 1);
-					p->drawText(tr, alignFlag, text.mid(t + 1));
-					tr.translate(-1, -1);
+					p->drawText(tr.translated(1,1), alignFlag, textToDraw);
 					p->setPen(textcolor);
-				}
-
-				p->drawText(tr, alignFlag, text.mid(t + 1));
+				}				
+				p->drawText(tr, alignFlag, textToDraw);
 			}
 
-			int alignFlag = Qt::AlignVCenter | Qt::TextShowMnemonic | Qt::TextDontClip | Qt::TextSingleLine;
-			alignFlag |= ( reverse ? Qt::AlignRight : Qt::AlignLeft );
-
-			if (! (opt->state & State_Enabled)) {
+			// Draw main item text
+			const QString textToDraw = s.left(t).toString();
+			int alignFlag = tf | ( reverse ? Qt::AlignRight : Qt::AlignLeft );
+			if (!enabled && !active && proxy()->styleHint(SH_EtchDisabledText, opt, widget)) {
 				p->setPen(embosscolor);
-				ir.translate(1, 1);
-				p->drawText(ir, alignFlag, text.left(t));
-				ir.translate(-1, -1);
+				p->drawText(ir.translated(1,1), alignFlag, textToDraw);
 				p->setPen(textcolor);
-			}
+			}				
+			p->drawText(ir, alignFlag, textToDraw);			
+		}
 
-			p->drawText(ir, alignFlag, text.left(t));
-		} // mi->pixmap() is deprecated for a long time now, so ignore it
-
-		if (miOpt->menuItemType == QStyleOptionMenuItem::SubMenu) {
-			QStyleOption arrowOpt;
-			arrowOpt.state = opt->state;
-			arrowOpt.rect = QRect(0,0,8,9); // arrow dimensions taken from GTK+2 theme
-			arrowOpt.rect.moveCenter(sr.center());
-			arrowOpt.palette = opt->palette;
-			drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrowOpt, p, widget);
+		if (menuitem->menuItemType == QStyleOptionMenuItem::SubMenu) {
+			QStyleOption arrow;
+			arrow.state = menuitem->state;
+			arrow.rect = sr;
+			arrow.palette = menuitem->palette;
+			drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrow, p, widget);
 		}
 
 		break;
-		
 	}
 
 	case CE_MenuBarEmptyArea: {
