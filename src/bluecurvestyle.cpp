@@ -43,6 +43,7 @@
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QGuiApplication>
+#include <QBitmap>
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
@@ -353,7 +354,7 @@ BluecurveStyle::realizeData (const QPalette &palette) const
 	}
 
 	QImage mask = outline->createAlphaMask();
-	cdata->radioMask = new QPixmap (QPixmap::fromImage(mask));
+	cdata->radioMask = new QBitmap (QBitmap::fromImage(mask));
 
 	check = generate_bit (check_alpha, palette.highlight().color(), 1.0);
 	inconsistent = generate_bit (check_inconsistent_alpha, palette.highlight().color(), 1.0);
@@ -784,9 +785,8 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			pix += 1;
 		
 		radioPainter.drawPixmap(0,0, *cdata->radioPix[pix]);
-		radioPainter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
-		radioPainter.drawPixmap(0,0, *cdata->radioMask);
 		radioPainter.end();
+		radio.setMask(*cdata->radioMask);
 		
 		p->save();
 		if (isScaled)

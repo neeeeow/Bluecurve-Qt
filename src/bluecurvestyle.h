@@ -56,7 +56,7 @@ private:
 		QColor spots[3];
 
 		QPixmap *radioPix[8];
-		QPixmap *radioMask;
+		QBitmap *radioMask;
 
 		QPixmap *checkPix[6];
       
