@@ -1881,7 +1881,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				check.state |= State_On | State_Selected;
 			check.rect = cr;
 			check.palette = menuitem->palette;
-			drawPrimitive(PE_IndicatorMenuCheckMark, &check, p, widget);
+			proxy()->drawPrimitive(PE_IndicatorMenuCheckMark, &check, p, widget);
 		}
 
 		// Draw the text
@@ -1914,7 +1914,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			arrow.state = menuitem->state;
 			arrow.rect = sr;
 			arrow.palette = menuitem->palette;
-			drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrow, p, widget);
+			proxy()->drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrow, p, widget);
 		}
 
 		break;
