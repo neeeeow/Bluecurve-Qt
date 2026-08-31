@@ -1504,7 +1504,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				tr = tabRect;
 			
 			// Tab border
-			p->setPen(cdata->btnShades[6]);
+			p->setPen(cdata->bgShades[6]);
 			p->drawLine(tr.left(), tr.top(), tr.right(), tr.top()); // top
 			p->drawLine(tr.left(), tr.top(), tr.left(), tr.bottom() - baseOverlap); // left
 			p->drawLine(tr.right(), tr.top(), tr.right(), tr.bottom() - baseOverlap); // right
@@ -1514,7 +1514,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - 1, tr.top() + 1); // top
 			if (selected || first)
 				p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - (selected ? 0 : baseOverlap)); // left
-			p->setPen(cdata->btnShades[2]);
+			p->setPen(cdata->bgShades[2]);
 			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() -1, tr.bottom() - (selected ? 0 : baseOverlap)); // right
 
 			// Fill rectangle
@@ -1533,13 +1533,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				tr = tabRect;
 			
 			// Tab border
-			p->setPen(cdata->btnShades[6]);
+			p->setPen(cdata->bgShades[6]);
 		    p->drawLine(tr.left(), tr.bottom(), tr.right(), tr.bottom()); // bottom
 			p->drawLine(tr.left(), tr.top() + baseOverlap, tr.left(), tr.bottom()); // left
 			p->drawLine(tr.right(), tr.top() + baseOverlap, tr.right(), tr.bottom()); // right
 
 			// Inner shading
-			p->setPen(cdata->btnShades[2]);
+			p->setPen(cdata->bgShades[2]);
 			p->drawLine(tr.left() + 1, tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1); // bottom
 			p->drawLine(tr.right() - 1, tr.top() + (selected ? 0 : baseOverlap), tr.right() - 1, tr.bottom() - 1); // right
 			if (selected || first) {
@@ -1563,7 +1563,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				tr = tabRect;
 			
 			// Tab border
-			p->setPen(cdata->btnShades[6]);
+			p->setPen(cdata->bgShades[6]);
 			p->drawLine(tr.left(), tr.top(), tr.left(), tr.bottom()); // left
 			p->drawLine(tr.left(), tr.top(), tr.right() - baseOverlap, tr.top()); // top
 			p->drawLine(tr.left(), tr.bottom(), tr.right() - baseOverlap, tr.bottom()); // bottom
@@ -1573,7 +1573,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(tr.left() + 1, tr.top() + 1, tr.left() + 1, tr.bottom() - 1); // left
 			if (selected || first)
 				p->drawLine(tr.left() + 1, tr.top() + 1, tr.right() - (selected ? 0 : baseOverlap), tr.top() + 1); // top
-			p->setPen(cdata->btnShades[2]);
+			p->setPen(cdata->bgShades[2]);
 			p->drawLine(tr.left() + 1, tr.bottom() - 1, tr.right() - (selected ? 0 : baseOverlap), tr.bottom() - 1); // bottom
 
 			// Fill rectangle
@@ -1592,13 +1592,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				tr = tabRect;
 			
 			// Tab border
-			p->setPen(cdata->btnShades[6]);
+			p->setPen(cdata->bgShades[6]);
 			p->drawLine(tr.right(), tr.top(), tr.right(), tr.bottom()); // right
 			p->drawLine(tr.left() + baseOverlap, tr.top(), tr.right(), tr.top()); // top
 			p->drawLine(tr.left() + baseOverlap, tr.bottom(), tr.right(), tr.bottom()); // bottom
 
 			// Inner shading
-			p->setPen(cdata->btnShades[2]);
+			p->setPen(cdata->bgShades[2]);
 			p->drawLine(tr.right() - 1, tr.top() + 1, tr.right() - 1, tr.bottom() - 1); // right
 			p->drawLine(tr.left() + (selected ? 0 : baseOverlap), tr.bottom() - 1, tr.right() - 1, tr.bottom() - 1); // bottom
 			if (selected || first) {
@@ -1622,7 +1622,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		// Apply the fill
 		if (isScaled)
 			p->translate(-0.5,-0.5);
-		p->fillRect(fr, selected ? tb->palette.button() : tb->palette.mid());
+		p->fillRect(fr, selected ? tb->palette.window() : tb->palette.mid());
 		
 		p->restore();
 		break;
@@ -1712,7 +1712,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 			
 		// Tab border
-		p->setPen(cdata->btnShades[6]);
+		p->setPen(cdata->bgShades[6]);
 		p->drawLine(r.left(), r.top(), r.right(), r.top()); // top
 		p->drawLine(r.left(), r.top(), r.left(), r.bottom()); // left
 		p->drawLine(r.right(), r.top(), r.right(), r.bottom()); // right
@@ -1721,14 +1721,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		p->setPen(Qt::white);
 		p->drawLine(r.left() + 1, r.top() + 1, r.right() - 1, r.top() + 1); // top
 		p->drawLine(r.left() + 1, r.top() + 1, r.left() + 1, r.bottom()); // left
-		p->setPen(cdata->btnShades[2]);
+		p->setPen(cdata->bgShades[2]);
 		p->drawLine(r.right() - 1, r.top() + 1, r.right() -1, r.bottom()); // right
 
 		// Fill rectangle
 		QRect fr = r.adjusted(2, 2, -2, 0);
 		if (isScaled)
 			p->translate(-0.5,-0.5);
-		p->fillRect(fr, selected ? opt->palette.button() : opt->palette.mid());
+		p->fillRect(fr, selected ? opt->palette.window() : opt->palette.mid());
 		p->restore();
 		
 		break;
