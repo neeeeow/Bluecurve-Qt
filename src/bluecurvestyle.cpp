@@ -826,9 +826,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		} else {
 			int xx = r.left() + 3;
 			int yy = r.top() + (r.height() - 4) / 2;
-			int nLines = (r.width() - 5) / 4;
+			int nLines = (r.width() - 6) / 4;
 
-			for (int i = 0; i < nLines; xx += 4, i++) {
+			for (int i = 0; i < nLines; xx += 5, i++) {
 				p->setPen(cdata->bgShades[5]);
 				p->drawLine(xx + 3, yy,
 							xx, yy + 3);
@@ -839,7 +839,6 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		}
 
 		p->restore();
-
 		break;
 	}
 
@@ -882,23 +881,18 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_Frame:
 	case PE_FrameWindow:
 	case PE_FrameDockWidget:
-	case PE_FrameMenu: {
-		QStyleOption optCopy(*opt);
-		if ( ! (optCopy.state & State_Sunken ) )
-			optCopy.state |= State_Raised;
-			
-		drawLightBevel(p, &optCopy);
-		break;
-	}	   		
-
+	case PE_FrameMenu:
 	case PE_FrameTabWidget: {
-		QStyleOption optCopy(*opt);
-		if ( ! (optCopy.state & State_Sunken ) )
-			optCopy.state |= State_Raised;
-			
-		drawLightBevel(p, &optCopy, nullptr, false, true);
-		break;        
-	}
+		QStyleOption bevel(*opt);
+		if ( ! (bevel.state & State_Sunken ) )
+			bevel.state |= State_Raised;
+
+		if (pe == PE_FrameTabWidget)
+			drawLightBevel(p, &bevel, nullptr, false, true);
+		else		
+			drawLightBevel(p, &bevel);
+		break;
+	}  		
 
 	case PE_FrameTabBarBase: {
 		const QStyleOptionTabBarBase *tbb = qstyleoption_cast<const QStyleOptionTabBarBase *>(opt);
@@ -1215,23 +1209,29 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		if (isScaled) {
 			p->scale(inverseScale, inverseScale);
 			p->translate(0.5, 0.5);
-		}
-		
+		}		
+
 		if (opt->state & State_Horizontal) {
-			int y_mid = r.center().y()+2;
-			for (int i=0; i< 21; i=i+5) {
+			int xx = r.left() + (r.width() - 4) / 2;
+			int yy = r.top() + (r.height() - 24) / 2;
+
+			for (int i = 0; i < 5; yy += 5, i++) {
 				p->setPen(cdata->bgShades[5]);
-				p->drawLine(r.x()+1, y_mid-10+i, r.right()-1, y_mid-10+i-3);
+				p->drawLine(xx, yy + 3, xx + 3, yy);
 				p->setPen(Qt::white);
-				p->drawLine(r.x()+1, y_mid-10+i+1, r.right()-1, y_mid-10+i-2);
-			}
+				p->drawLine(xx, yy + 4, xx + 3, yy + 1);
+			}			
 		} else {
-			int x_mid = r.center().x()+2;
-			for (int i=0; i< 21; i=i+5) {
+		    int xx = r.left() + (r.width() - 24) / 2;
+			int yy = r.top() + (r.height() - 4) / 2;
+
+			for (int i = 0; i < 5; xx += 5, i++) {
 				p->setPen(cdata->bgShades[5]);
-				p->drawLine(x_mid-10+i+3, r.y()+1, x_mid-10+i, r.bottom()-1);
+				p->drawLine(xx + 3, yy,
+							xx, yy + 3);
 				p->setPen(Qt::white);
-				p->drawLine(x_mid-10+i+4, r.y()+1, x_mid-10+i+1, r.bottom()-1);
+				p->drawLine(xx + 3, yy + 1,
+							xx + 1, yy + 4);
 			}
 		}
 
@@ -1325,9 +1325,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		int x1, y1;
 
 		// Highlight on mouse over
-		QStyleOption optCopy(*opt);
-	    optCopy.state = (opt->state & ~State_Sunken) | State_Raised;
-	    drawLightBevel(p, &optCopy, (opt->state & State_MouseOver) ? &opt->palette.midlight() : &opt->palette.button(), true, true);
+		QStyleOption bevel(*opt);
+	    bevel.state = (opt->state & ~State_Sunken) | State_Raised;
+	    drawLightBevel(p, &bevel, (opt->state & State_MouseOver) ? &opt->palette.midlight() : &opt->palette.button(), true, true);
 
 		if (opt->state & State_Horizontal && opt->rect.width() < 31)
 			break;
@@ -1371,8 +1371,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->drawLine(x1 + 5, y1 + 1 + 5*2, x1 + 1, y1 + 5 + 5*2);
 		}
 
-		p->restore();
-		
+		p->restore();		
 		break;
 	}
 		
