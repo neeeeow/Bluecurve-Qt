@@ -1192,29 +1192,54 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	// -------------------------------------------------------------------
 	case CE_ScrollBarAddLine:
 	case CE_ScrollBarSubLine: {
+		const QStyleOptionSlider *scrollbar = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!scrollbar)
+			return;
+
+		// Compute state for the button (if the scrollbar is at the edge, it *must* be disabled
+		bool isMin = (scrollbar->sliderValue <= scrollbar->minimum); // first check if the scrollbar is at min or max value
+        bool isMax = (scrollbar->sliderValue >= scrollbar->maximum);
+		bool isStart = scrollbar->upsideDown ? isMax : isMin;
+        bool isEnd   = scrollbar->upsideDown ? isMin : isMax;
+		bool disabled = ((control == CE_ScrollBarSubLine) && isStart) || ((control == CE_ScrollBarAddLine) && isEnd);
+
+		// Palette used for scrollbar
+		QPalette pal = scrollbar->palette;
+		if (disabled)
+			pal.setCurrentColorGroup(QPalette::Disabled);
+
+		// state flags
+		QStyle::State state = scrollbar->state;
+		if (disabled && (scrollbar->state & State_Enabled)) {
+			state &= ~State_Enabled;
+			state &= ~State_Sunken;
+			state &= ~State_MouseOver;
+			state |= State_Raised;
+		} else if (!(state & State_Sunken))
+			state |= State_Raised;
+		
 		// Draw button background
 		QStyleOptionButton btn;
-		btn.rect = opt->rect;
-		btn.palette = opt->palette;
-		btn.state = opt->state;
-		if (!(opt->state & State_Sunken))
-			btn.state |= State_Raised;
+		btn.rect = scrollbar->rect;
+		btn.palette = pal;
+		btn.state = state;
 	    proxy()->drawPrimitive(PE_PanelButtonBevel, &btn, p, widget);
 
 		PrimitiveElement pe;
-		if ((control == CE_ScrollBarAddLine) && (opt->state & State_Horizontal)) {
+		if ((control == CE_ScrollBarAddLine) && (opt->state & State_Horizontal))
 			pe = PE_IndicatorArrowRight;
-		} else if (control == CE_ScrollBarAddLine) {
+		else if (control == CE_ScrollBarAddLine)
 			pe = PE_IndicatorArrowDown;
-		} else if (opt->state & State_Horizontal) {
+		else if (opt->state & State_Horizontal)
 			pe = PE_IndicatorArrowLeft;
-		} else {
+		else
 			pe = PE_IndicatorArrowUp;
-		}
 
+		// Draw arrow
 		QStyleOption arrow;
-		arrow.palette = opt->palette;
-		arrow.rect = opt->rect.adjusted(3,3,-3,-3);
+		arrow.palette = pal;
+		arrow.rect = scrollbar->rect.adjusted(3,3,-3,-3);
+		arrow.state = state;
 	    proxy()->drawPrimitive(pe, &arrow, p, widget);
 	  
 		break;
@@ -1793,18 +1818,23 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-		int tab = menuitem->reservedShortcutWidth;
+		const int tab = menuitem->reservedShortcutWidth;
 #else
-		int tab = menuitem->tabWidth;
+		const int tab = menuitem->tabWidth;
 #endif
+		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
+		const int itemHMargin = 4;
+		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
+		const int arrowHeight = 9;
+		
 		bool enabled = menuitem->state & State_Enabled;
 		bool checked = menuitem->checkType != QStyleOptionMenuItem::NotCheckable
 			? menuitem->checked : false;
 		bool active = menuitem->state & State_Selected;
 		bool reverse = QGuiApplication::isRightToLeft();
 
+		// Separator
 		if ( menuitem->menuItemType == QStyleOptionMenuItem::Separator ) {
-			// draw separator
 			p->fillRect(menuitem->rect, menuitem->palette.window());
 
 			p->save();
@@ -1822,24 +1852,19 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 		}
 
-		// menu background
-		if (enabled && active) {
+		// Menu background
+		if (enabled && active)
 			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
-		} else {
+		else 
 			p->fillRect(opt->rect, opt->palette.button());
-		}
 
 		// compute rects
 		int x,y,w,h;
 		menuitem->rect.getRect(&x,&y,&w,&h);
-		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
-		const int rectPadding = 4;
-		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
-		const int arrowHeight = 9;
 		QRect cr(x, y, checkcol, h); // Check mark rect
-		QRect sr(menuitem->rect.right() + 1 - arrowWidth - rectPadding, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
-		QRect tr(sr.left() - tab - rectPadding, y, tab, h); // tab/accelerator rect
-		QRect ir(cr.right() + rectPadding, y, tr.left() - cr.right() - 2 * rectPadding - x, h); // main text rect
+		QRect sr(x + w - arrowWidth - itemHMargin, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
+		QRect tr(sr.left() - tab - itemHMargin, y, tab, h); // tab/accelerator rect
+		QRect ir(cr.right() + itemHMargin, y, tr.left() - cr.right() - 2 * itemHMargin - x, h); // main text rect
 		if ( reverse ) {
 			cr = visualRect( opt->direction, menuitem->rect, cr );
 			sr = visualRect( opt->direction, menuitem->rect, sr );
