@@ -477,10 +477,11 @@ void
 BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 							   const QBrush *fill, bool btnPal, bool dark) const
 {
-	p->save();
+	// Set up QPainter and drawing rectangle for HiDPI scaling if necessary
 	const qreal dpr = getDpr(p);
 	QRect r;
 	bool isScaled = false;
+	p->save();
 	if (!qFuzzyCompare(dpr, qreal(1))) {
 		const qreal inverseScale = qreal(1) / dpr;
 		p->scale(inverseScale, inverseScale);
@@ -490,46 +491,39 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 	} else {
 		r = opt->rect;
 	}
-	
-	//const QRect &r = opt->rect;
-	QRect br = r;
-	QColor col;
 
+	// Draw a sunken frame if the appropriate flags are set, otherwise draw
+	// a raised frame by default
 	bool sunken = (opt->state & (QStyle::State_On | QStyle::State_Sunken));
 
+	// Color data for shades
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 
+	// Outside border
 	if (btnPal)
 		p->setPen(dark ? cdata->btnShades[6] : cdata->btnShades[5]);
 	else
 		p->setPen(dark ? cdata->bgShades[6] : cdata->bgShades[5]);
     p->drawRect(r.adjusted(0, 0, -1, -1));
 
-	if (opt->state & (QStyle::State_On |
-					  QStyle::State_Sunken | QStyle::State_Raised)) {
-		// button bevel
-		p->setPen(sunken ? Qt::white : (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]));
-		p->drawLine(r.x() + r.width() - 2, r.y() + 2,
-					r.x() + r.width() - 2, r.y() + r.height() - 3); // right
-		p->drawLine(r.x() + 1, r.y() + r.height() - 2,
-					r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
+	// Bevel
+	p->setPen(sunken ? Qt::white : (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]));
+	p->drawLine(r.x() + r.width() - 2, r.y() + 2,
+				r.x() + r.width() - 2, r.y() + r.height() - 3); // right
+	p->drawLine(r.x() + 1, r.y() + r.height() - 2,
+				r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
 
-		p->setPen(sunken ? (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]) : Qt::white);
-		p->drawLine(r.x() + 1, r.y() + 2,
-					r.x() + 1, r.y() + r.height() - 2); // left
-		p->drawLine(r.x() + 1, r.y() + 1,
-					r.x() + r.width() - 2, r.y() + 1); // top
+	p->setPen(sunken ? (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]) : Qt::white);
+	p->drawLine(r.x() + 1, r.y() + 2,
+				r.x() + 1, r.y() + r.height() - 2); // left
+	p->drawLine(r.x() + 1, r.y() + 1,
+				r.x() + r.width() - 2, r.y() + 1); // top
 
-		br.adjust(2, 2, -2, -2);
-	} else {
-		br.adjust(1, 1, -1, -1);
-	}
-
-	// fill
+	// Fill
 	if (fill) {
 		if (isScaled)
 			p->translate(-0.5, -0.5);		
-		p->fillRect(br, *fill);
+		p->fillRect(r.adjusted(2, 2, -2, -2), *fill);
 	}
 	p->restore();
 }
@@ -883,14 +877,10 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_FrameDockWidget:
 	case PE_FrameMenu:
 	case PE_FrameTabWidget: {
-		QStyleOption bevel(*opt);
-		if ( ! (bevel.state & State_Sunken ) )
-			bevel.state |= State_Raised;
-
 		if (pe == PE_FrameTabWidget)
-			drawLightBevel(p, &bevel, nullptr, false, true);
+			drawLightBevel(p, opt, nullptr, false, true);
 		else		
-			drawLightBevel(p, &bevel);
+			drawLightBevel(p, opt);
 		break;
 	}  		
 
@@ -1166,15 +1156,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	// HEADER SECTION
 	// -------------------------------------------------------------------		
 	case CE_HeaderSection: {
-		QStyle::State state = opt->state;
-		if (!(state & (State_Sunken | State_Raised)))
-			state |= State_Raised;
-
-		QStyleOption optCopy(*opt);
-        optCopy.state = state;
-
-        drawLightBevel(p, &optCopy, &opt->palette.button(), true); 
-		
+        drawLightBevel(p, opt, &opt->palette.button(), true); 		
 		break;
 	}
 
@@ -2302,7 +2284,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 
 		if ((opt->subControls & SC_ComboBoxFrame) && frame.isValid()) {
 			QStyleOption frameOpt;
-			frameOpt.state = opt->state | State_Raised;
+			frameOpt.state = opt->state;
 			frameOpt.rect = frame;
 			frameOpt.palette = opt->palette;
 			if (opt->state & State_MouseOver)

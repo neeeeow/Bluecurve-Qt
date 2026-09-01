@@ -80,8 +80,8 @@ private:
 					  const QBrush *fill = nullptr) const;
 
 	// Draws a raised/sunken Bluecurve style bevel rectangle
-	void drawLightBevel(QPainter *p, const QStyleOption *opt,
-						const QBrush *fill = nullptr, bool btnPal = false, bool dark = false) const;	
+	void drawLightBevel(QPainter *p, const QStyleOption *opt, const QBrush *fill = nullptr,
+						bool btnPal = false, bool dark = false) const;	
 
 	// Draws a Bluecurve style gradient rectangle
 	void drawGradient(QPainter *p, QRect const &rect, const QPalette &palette,
