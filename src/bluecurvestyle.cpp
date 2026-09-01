@@ -898,7 +898,60 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 			
 		drawLightBevel(p, &optCopy, nullptr, false, true);
 		break;        
-	}		
+	}
+
+	case PE_FrameTabBarBase: {
+		const QStyleOptionTabBarBase *tbb = qstyleoption_cast<const QStyleOptionTabBarBase *>(opt);
+		if (!tbb)
+			break;
+
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+
+		// For the tab bar base, simply draw the side of the light bevel facing the tab bar
+		switch (tbb->shape) {
+		case QTabBar::RoundedNorth:
+		case QTabBar::TriangularNorth: {
+			p->setPen(cdata->bgShades[6]);
+			p->drawLine(r.left(), r.top(), r.right(), r.top());
+			p->setPen(Qt::white);
+			p->drawLine(r.left(), r.top() + 1, r.right(), r.top() + 1);
+			break;
+		}
+		case QTabBar::RoundedSouth:
+		case QTabBar::TriangularSouth: {
+			p->setPen(cdata->bgShades[6]);
+			p->drawLine(r.left(), r.bottom(), r.right(), r.bottom());
+			p->setPen(cdata->bgShades[2]);
+			p->drawLine(r.left(), r.bottom() - 1, r.right(), r.bottom() - 1);
+			break;
+		}
+		case QTabBar::RoundedWest:
+		case QTabBar::TriangularWest: {
+			p->setPen(cdata->bgShades[6]);
+			p->drawLine(r.left(), r.top(), r.left(), r.bottom());
+			p->setPen(Qt::white);
+			p->drawLine(r.left() + 1, r.top(), r.left() + 1, r.bottom());
+			break;
+		}
+		case QTabBar::RoundedEast:
+		case QTabBar::TriangularEast: {
+			p->setPen(cdata->bgShades[6]);
+			p->drawLine(r.right(), r.top(), r.right(), r.bottom());
+			p->setPen(cdata->bgShades[2]);
+			p->drawLine(r.right() - 1, r.top(), r.right() - 1, r.bottom());
+			break;		   
+		}
+		default:
+			break;
+		}
+
+		p->restore();
+		break;
+	}
 
 	case PE_FrameGroupBox: {
 		const QStyleOptionFrame *frame = qstyleoption_cast<const QStyleOptionFrame *>(opt);
@@ -914,10 +967,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (frame->features & QStyleOptionFrame::Flat) {
 			// If the frame is flat, draw only the top part
 			p->setPen(cdata->bgShades[3]);
-			p->drawLine(r.x(), r.y(), r.x() + r.width() - 1, r.y());
+			p->drawLine(r.left(), r.y(), r.right(), r.y());
 			p->setPen(cdata->bgShades[0]);
-			p->drawLine(r.x(), r.y() + 1, r.x() + r.width() - 1, r.y() + 1);
-			
+			p->drawLine(r.left(), r.y() + 1, r.right(), r.y() + 1);			
 		} else {
 			// Dark part
 			p->setPen(cdata->bgShades[3]);
@@ -1649,7 +1701,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->translate(-0.5,-0.5);
 		p->fillRect(fr, selected ? tb->palette.window() : tb->palette.mid());
 		
-		p->restore();
+		p->restore();		
 		break;
 	}
 
