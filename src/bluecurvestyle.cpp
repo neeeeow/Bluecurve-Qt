@@ -2228,38 +2228,13 @@ QRect
 BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 							   const QWidget *widget) const
 {
-	QRect rect, wrect(opt->rect);
+	QRect rect;
 
 	switch (element) {
-	case SE_PushButtonFocusRect: {
-		const QStyleOptionButton *buttonOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
-		int dbw1 = 0, dbw2 = 0;
-		if ((buttonOpt->features & QStyleOptionButton::DefaultButton) ||
-			(buttonOpt->features & QStyleOptionButton::AutoDefaultButton)) {
-			dbw1 = pixelMetric(PM_ButtonDefaultIndicator, opt, widget);
-			dbw2 = dbw1 * 2;
-		}
-
-		rect.setRect(wrect.x()	  + 3 + dbw1,
-					 wrect.y()	  + 3 + dbw1,
-					 wrect.width()  - 6 - dbw2,
-					 wrect.height() - 6 - dbw2);
-		break;
-	}
-
-	case SE_CheckBoxIndicator: {
-		int h = pixelMetric( PM_IndicatorHeight );
-		rect.setRect(( opt->rect.height() - h ) / 2,
-					 ( opt->rect.height() - h ) / 2,
-					 pixelMetric( PM_IndicatorWidth ), h );
-		break;
-	}
-
+	case SE_CheckBoxIndicator:
 	case SE_RadioButtonIndicator: {
-		int h = pixelMetric( PM_ExclusiveIndicatorHeight );
-		rect.setRect( ( opt->rect.height() - h ) / 2,
-					  ( opt->rect.height() - h ) / 2,
-					  pixelMetric( PM_ExclusiveIndicatorWidth ), h );
+		rect = QCommonStyle::subElementRect(element, opt, widget);
+		rect.translate(2,0);
 		break;
 	}
 		
@@ -2981,15 +2956,6 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	case PM_ButtonShiftHorizontal:
 	case PM_ButtonShiftVertical: {
 		ret = 0;
-		break;
-	}
-
-	case PM_DefaultFrameWidth: {
-		if (widget && widget->inherits("QStackedWidget")) {
-			ret = 2;
-		} else {
-			ret = 1;
-		}
 		break;
 	}
 
