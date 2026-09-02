@@ -1416,6 +1416,10 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			else
 				tf |= Qt::AlignRight;
 
+			if (button->state & (State_On | State_Sunken))
+				iconRect.translate(proxy()->pixelMetric(PM_ButtonShiftHorizontal, opt, widget),
+								   proxy()->pixelMetric(PM_ButtonShiftVertical, opt, widget));
+
 			p->drawPixmap(iconRect, pixmap);
 			
 		} else {
@@ -1434,6 +1438,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 
 		QRect rect = toolbutton->rect;
+		int shiftX = 0;
+		int shiftY = 0;
+		if (toolbutton->state & (State_Sunken | State_On)) {
+			shiftX = proxy()->pixelMetric(PM_ButtonShiftHorizontal, toolbutton, widget);
+			shiftY = proxy()->pixelMetric(PM_ButtonShiftVertical, toolbutton, widget);
+		}
 
 		bool hasArrow = toolbutton->features & QStyleOptionToolButton::Arrow;
 		if (((!hasArrow && toolbutton->icon.isNull()) && !toolbutton->text.isEmpty())
@@ -1501,6 +1511,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				if (toolbutton->toolButtonStyle == Qt::ToolButtonTextUnderIcon) {
 					pr.setHeight(pmSize.height() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
 					tr.adjust(0, pr.height() - 1, 0, -1);
+					pr.translate(shiftX, shiftY);
 					if (!hasArrow) {
 					    proxy()->drawItemPixmap(p, pr, Qt::AlignCenter, pm);
 					} else {
@@ -1510,6 +1521,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				} else {
 					pr.setWidth(pmSize.width() + 4); //### 4 is currently hardcoded in QToolButton::sizeHint()
 					tr.adjust(pr.width(), 0, 0, 0);
+					pr.translate(shiftX, shiftY);
 					if (!hasArrow) {
 						proxy()->drawItemPixmap(p, QStyle::visualRect(opt->direction, rect, pr), Qt::AlignCenter, pm);
 					} else {
@@ -1517,10 +1529,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 					}
 					alignment |= Qt::AlignLeft | Qt::AlignVCenter;
 				}
+				tr.translate(shiftX, shiftY);
 				proxy()->drawItemText(p, QStyle::visualRect(opt->direction, rect, tr), alignment, toolbutton->palette,
 									  toolbutton->state & State_Enabled, toolbutton->text,
 									  QPalette::ButtonText);
 			} else {
+				rect.translate(shiftX, shiftY);
 				if (hasArrow) {
 					drawToolArrow(rect);
 				} else {
@@ -2023,12 +2037,14 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_ProgressBarContents: {
-		const QStyleOptionProgressBar *progressbarOpt = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
+		const QStyleOptionProgressBar *progressbar = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
+		if (!progressbar)
+			return;
 	    bool reverse = QGuiApplication::isRightToLeft();
 
 		QRect pr;
 
-		if ((progressbarOpt->minimum == 0) && (progressbarOpt->maximum == 0)) {
+		if ((progressbar->minimum == 0) && (progressbar->maximum == 0)) {
 			int w, remains;
 
 			// draw busy indicator
@@ -2039,16 +2055,16 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			remains = opt->rect.width() - w;
 			remains = std::max(remains, 1);
 
-			int x = progressbarOpt->progress % (remains * 2);
+			int x = progressbar->progress % (remains * 2);
 			if (x > remains)
 				x = 2 * remains - x;
 
 			x = reverse ? opt->rect.right() - x - w : x + opt->rect.left();
 			pr.setRect (x, opt->rect.top(), w, opt->rect.height());
 		} else {
-			int pos = progressbarOpt->progress;
-			int total = (progressbarOpt->maximum - progressbarOpt->minimum) ?
-				(progressbarOpt->maximum - progressbarOpt->minimum) : 1;
+			int pos = progressbar->progress;
+			int total = (progressbar->maximum - progressbar->minimum) ?
+				(progressbar->maximum - progressbar->minimum) : 1;
 			int w = (int)(((double)pos*opt->rect.width())/total);
 
 			if (reverse)
