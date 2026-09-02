@@ -494,7 +494,7 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 
 	// Draw a sunken frame if the appropriate flags are set, otherwise draw
 	// a raised frame by default
-	bool sunken = (opt->state & (QStyle::State_On | QStyle::State_Sunken));
+	bool sunken = (opt->state & (State_On | State_Sunken));
 
 	// Color data for shades
 	const BluecurveColorData *cdata = lookupData(opt->palette);
@@ -506,19 +506,24 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 		p->setPen(dark ? cdata->bgShades[6] : cdata->bgShades[5]);
     p->drawRect(r.adjusted(0, 0, -1, -1));
 
-	// Bevel
-	p->setPen(sunken ? Qt::white : (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]));
-	p->drawLine(r.x() + r.width() - 2, r.y() + 2,
-				r.x() + r.width() - 2, r.y() + r.height() - 3); // right
-	p->drawLine(r.x() + 1, r.y() + r.height() - 2,
-				r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
-
-	p->setPen(sunken ? (btnPal ? cdata->btnShades[2] : cdata->bgShades[2]) : Qt::white);
-	p->drawLine(r.x() + 1, r.y() + 2,
-				r.x() + 1, r.y() + r.height() - 2); // left
-	p->drawLine(r.x() + 1, r.y() + 1,
-				r.x() + r.width() - 2, r.y() + 1); // top
-
+	// Draw the bevel (NB: the white line always overlaps the grey)
+	int x1 = r.x()+1; int y1 = r.y()+1; int x2=r.x() + r.width() - 2; int y2=r.y() + r.height() - 2;
+	if (sunken) {
+		p->setPen(btnPal ? cdata->btnShades[2] : cdata->bgShades[2]);
+		p->drawLine(x1,y1,x1,y2); // left
+		p->drawLine(x1,y1,x2,y1); // top
+		p->setPen(Qt::white);
+		p->drawLine(x1,y2,x2,y2); // bottom
+		p->drawLine(x2,y1,x2,y2); // right
+	} else {
+		p->setPen(btnPal ? cdata->btnShades[2] : cdata->bgShades[2]);
+		p->drawLine(x1,y2,x2,y2); // bottom
+		p->drawLine(x2,y1,x2,y2); // right
+		p->setPen(Qt::white);
+		p->drawLine(x1,y1,x1,y2); // left
+		p->drawLine(x1,y1,x2,y1); // top
+	}
+	
 	// Fill
 	if (fill) {
 		if (isScaled)
@@ -697,9 +702,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_IndicatorTabClose: {
 		// Set button options
 		QStyleOptionButton button;
-		button.rect = opt->rect;
-		button.state = opt->state;
-		button.palette = opt->palette;
+	    button.QStyleOption::operator=(*opt);
 		button.features = QStyleOptionButton::Flat;
 
 		// Draw the button
@@ -1765,7 +1768,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			fropt.QStyleOption::operator=(*tab);
 			fropt.rect.setRect(x1 + 1 + OFFSET, tab->rect.y() + OFFSET,
 							   x2 - x1 - 2*OFFSET, tab->rect.height() - 2*OFFSET);
-			drawPrimitive(PE_FrameFocusRect, &fropt, p, widget);
+			proxy()->drawPrimitive(PE_FrameFocusRect, &fropt, p, widget);
 		}
 		
 		break;
@@ -1982,10 +1985,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 
 		if (menuitem->menuItemType == QStyleOptionMenuItem::SubMenu) {
-			QStyleOption arrow;
-			arrow.state = menuitem->state;
+			QStyleOption arrow = *menuitem;
 			arrow.rect = sr;
-			arrow.palette = menuitem->palette;
 			proxy()->drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrow, p, widget);
 		}
 
@@ -2228,18 +2229,22 @@ QRect
 BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 							   const QWidget *widget) const
 {
-	QRect rect;
+	QRect rect = QCommonStyle::subElementRect(element, opt, widget);
 
 	switch (element) {
 	case SE_CheckBoxIndicator:
 	case SE_RadioButtonIndicator: {
-		rect = QCommonStyle::subElementRect(element, opt, widget);
 		rect.translate(2,0);
 		break;
 	}
+
+	case SE_ComboBoxFocusRect: {
+		bool reverse = (opt->direction == Qt::RightToLeft);
+		rect.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);		
+		break;		
+	}
 		
 	default: {
-		rect = QCommonStyle::subElementRect(element, opt, widget);
 		break;
 	}
 	}
@@ -2266,98 +2271,73 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 	
 	switch (control) {
 	case CC_ComboBox: {
-		const QStyleOptionComboBox *comboboxOpt = qstyleoption_cast<const QStyleOptionComboBox *>(opt);
+		const QStyleOptionComboBox *combobox = qstyleoption_cast<const QStyleOptionComboBox *>(opt);
+		if (!combobox)
+			break;
+
 		QRect frame, arrow, field;
+		frame = proxy()->subControlRect(CC_ComboBox, opt, SC_ComboBoxFrame, widget);
+		arrow = proxy()->subControlRect(CC_ComboBox, opt, SC_ComboBoxArrow, widget);
+		field = proxy()->subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget);
 
-		frame = subControlRect(CC_ComboBox, opt, SC_ComboBoxFrame, widget);
-		arrow = subControlRect(CC_ComboBox, opt, SC_ComboBoxArrow, widget);
-		field = subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget);
-
-		if ((opt->subControls & SC_ComboBoxFrame) && frame.isValid()) {
-			QStyleOption frameOpt;
-			frameOpt.state = opt->state;
-			frameOpt.rect = frame;
-			frameOpt.palette = opt->palette;
-			if (opt->state & State_MouseOver)
-				drawLightBevel(p, &frameOpt, &opt->palette.midlight(), true, true);
-			else
-				drawLightBevel(p, &frameOpt, &opt->palette.button(), true, true);
+		// Combobox frame (same as standard button)
+		if (opt->subControls & SC_ComboBoxFrame) {
+			QStyleOptionButton button;
+			button.QStyleOption::operator=(*combobox);
+			button.rect = frame;
+			proxy()->drawPrimitive(PE_PanelButtonBevel, &button, p, widget);
 		}
 
-		if ((opt->subControls & SC_ComboBoxArrow) && arrow.isValid()) {
-			QStyleOption arrowOpt;
-			arrowOpt.state = opt->state & ~State_MouseOver;
-			arrowOpt.rect = QRect(0,0,9,8);
+		// Combobox arrow
+		if (opt->subControls & SC_ComboBoxArrow) {
+			// Indicator arrow
+			QStyleOption arrowOpt = *combobox;
+		    arrowOpt.rect = QRect(0,0,9,8);
 			arrowOpt.rect.moveCenter(arrow.center());
-			arrowOpt.palette = opt->palette;
-			
+			arrowOpt.rect.translate(0,-2);
 			drawPrimitive(PE_IndicatorArrowDown, &arrowOpt, p);
 
-			p->save();
-
-			QRect arrowScaled; // drawing area to be scaled			
-			if (isScaled) {
-				arrowScaled = getScaledRect(arrow, dpr);
-				p->scale(inverseScale, inverseScale);
-				p->translate(0.5, 0.5);
-			} else
-				arrowScaled = arrow;
-			
-			p->setPen(cdata->btnShades[3]);			
-			p->drawLine((arrowScaled.left()+arrowScaled.right())/2-2, 
-						(arrowScaled.top()+arrowScaled.bottom())/2+5, 
-						(arrowScaled.left()+arrowScaled.right())/2+2,
-						(arrowScaled.top()+arrowScaled.bottom())/2+5);
-			p->drawLine((arrowScaled.left()+arrowScaled.right())/2-2,
-						(arrowScaled.top()+arrowScaled.bottom())/2+6,
-						(arrowScaled.left()+arrowScaled.right())/2+2,
-						(arrowScaled.top()+arrowScaled.bottom())/2+6);
-
-			p->restore();
+			// Shadow underneath the arrow
+			p->fillRect(arrowOpt.rect.x() + 2,
+						arrowOpt.rect.bottom() + 1,
+						5, 2, cdata->btnShades[3]);
 		}
 
-		if ((opt->subControls & SC_ComboBoxEditField) && field.isValid()) {
-			p->save();
-			p->setPen(cdata->btnShades[4]);
+		// Separator
+		if (opt->subControls & (SC_ComboBoxEditField | SC_ComboBoxArrow)) {
+		   bool reverse = (combobox->direction == Qt::RightToLeft);
+		   bool sunken = (combobox->state & (State_On | State_Sunken));
 
-			QRect fieldScaled;
-			if (isScaled) {
-				fieldScaled = getScaledRect(field, dpr);
-				p->scale(inverseScale, inverseScale);
-				p->translate(0.5, 0.5);
-			} else
-				fieldScaled = field;
-			
-			if (comboboxOpt->editable) {
-				fieldScaled.adjust(-1, -1, 1, 1);
-				p->drawLine(fieldScaled.right(), fieldScaled.top() - 1,
-							fieldScaled.right(), fieldScaled.bottom() + 1);
-				p->setPen(opt->palette.light().color());
-				p->drawLine(fieldScaled.right() + 1, fieldScaled.top(),
-							fieldScaled.right() + 1, fieldScaled.bottom() );
-			} else {
-				p->drawLine(fieldScaled.right() + 1, fieldScaled.top() - 2,
-							fieldScaled.right() + 1, fieldScaled.bottom() + 2);
-				p->setPen(opt->palette.light().color());
-				p->drawLine(fieldScaled.right() + 2, fieldScaled.top() - 1,
-							fieldScaled.right() + 2, fieldScaled.bottom() + 1);
-			}
+		   p->save();
+		   if (isScaled) {
+			   arrow = getScaledRect(arrow, dpr);
+			   p->scale(inverseScale, inverseScale);
+			   p->translate(0.5, 0.5);
+		   }
 
-			p->restore();
-
-			if (opt->state & State_HasFocus) {
-				if (! comboboxOpt->editable) {
-					QRect fr = subElementRect(SE_ComboBoxFocusRect, opt, widget);
-					fr.setRight(fr.right() - 3);
-					QStyleOption focusRectOpt;
-					focusRectOpt.state = opt->state | State_FocusAtBorder;
-					focusRectOpt.rect = fr;
-					focusRectOpt.palette = opt->palette;
-					drawPrimitive(PE_FrameFocusRect, opt, p);
-				}
-			}
-
+		   if (reverse) {
+			   p->setPen(sunken ? Qt::white : cdata->btnShades[2]);
+			   p->drawLine(arrow.right() + 1, r.top() + 1 + (sunken ? 0 : 1), arrow.right() + 1, r.bottom() - 1);
+			   p->setPen(cdata->btnShades[3]);
+			   p->drawLine(arrow.right() + 2, r.top() + 1, arrow.right() + 2, r.bottom() - 1);
+		   } else {
+			   p->setPen(sunken ? cdata->btnShades[2] : Qt::white);
+			   p->drawLine(arrow.left() - 1, r.top() + 1, arrow.left() - 1, r.bottom() - 1 - (sunken ? 1 : 0));
+			   p->setPen(cdata->btnShades[3]);
+			   p->drawLine(arrow.left() - 2, r.top() + 1, arrow.left() - 2, r.bottom() - 1);
+		   }		   
+		   
+		   p->restore();
 		}
+		
+		// Focus rect
+		if ((opt->subControls & SC_ComboBoxEditField) && (combobox->state & State_HasFocus) && !combobox->editable) {
+			QStyleOptionFocusRect focus;
+			focus.QStyleOption::operator=(*combobox);
+			focus.rect = subElementRect(SE_ComboBoxFocusRect, combobox, widget);
+			focus.state |= State_FocusAtBorder;
+			proxy()->drawPrimitive(PE_FrameFocusRect, &focus, p, widget);
+		}		
 		
 		break;
 	}
@@ -2899,17 +2879,14 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 
 	case CC_ComboBox: {
 		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
+	    bool reverse = (opt->direction == Qt::RightToLeft);
 		switch (sc) {
-		case SC_ComboBoxFrame: {
-			break;
-		}
 		case SC_ComboBoxArrow: {
-			ret.setTop(ret.top() - 2);
-			ret.setLeft(ret.left() - 1);
+			ret.adjust(reverse ? 0 : -1, 0, reverse ? 1 : 0, 0);
 			break;
 		}
 		case SC_ComboBoxEditField: {
-			ret.setRight(ret.right() - 2);
+			ret.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);
 			break;
 		}
 		default: {
