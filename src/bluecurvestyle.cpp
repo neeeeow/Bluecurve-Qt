@@ -2196,14 +2196,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 {
 	const qreal dpr = getDpr(p);
 	const qreal inverseScale = qreal(1) / dpr;
-	QRect r;
-	bool isScaled = false;
-	if (!qFuzzyCompare(dpr, qreal(1))) {
-		isScaled = true;
-	    r = getScaledRect(opt->rect, dpr);
-	} else {
-		r = opt->rect;
-	}
+	bool isScaled = qFuzzyCompare(dpr, qreal(1)) ? false : true;
 	
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
@@ -2245,6 +2238,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		if ((combobox->subControls & SC_ComboBoxEditField) && (combobox->subControls & SC_ComboBoxArrow)) {
 		   bool reverse = (combobox->direction == Qt::RightToLeft);
 		   bool sunken = (combobox->state & (State_On | State_Sunken));
+		   QRect r = getScaledRect(combobox->rect, dpr);
 
 		   p->save();
 		   if (isScaled) {
@@ -2382,104 +2376,89 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 	}
 		
 	case CC_Slider: {
-		const QStyleOptionSlider *sliderOpt = qstyleoption_cast<const QStyleOptionSlider *>(opt);
-		QRect groove = subControlRect(CC_Slider, opt, SC_SliderGroove, widget);
-		QRect handle = subControlRect(CC_Slider, opt, SC_SliderHandle, widget);
+		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!slider)
+			break;
 
-		if ((opt->subControls & SC_SliderGroove) && groove.isValid()) {
-			if (opt->state & State_HasFocus) {
-				QStyleOption focusOpt;
-				focusOpt.state = QStyle::State();
-				focusOpt.rect = groove;
-				focusOpt.palette = opt->palette;
-				drawPrimitive(PE_FrameFocusRect, &focusOpt, p);
-			}
-
-			if (sliderOpt->orientation == Qt::Horizontal) {
-				int dh = (groove.height() - 5) / 2;
-				groove.adjust(0, dh, 0, -dh);
-				handle.adjust(0, 1, 0, -1);
-			} else {
-				int dw = (groove.width() - 5) / 2;
-				groove.adjust(dw, 0, -dw, 0);
-				handle.adjust(1, 0, -1, 0);
-			}
-
+		// Groove
+		if (slider->subControls & SC_SliderGroove) {
+			QRect groove = getScaledRect(proxy()->subControlRect(CC_Slider, slider, SC_SliderGroove, widget), dpr);
 			p->save();
-
-			QRect grooveScaled;
 			if (isScaled) {
-				grooveScaled = getScaledRect(groove, dpr);
 				p->scale(inverseScale, inverseScale);
 				p->translate(0.5, 0.5);
-			} else
-				grooveScaled = groove;
-						
+			}
+
 			p->setPen(cdata->bgShades[5]);
 			p->setBrush(cdata->bgShades[3]);
-			p->drawRect(grooveScaled.adjusted(0,0,-1,-1));
+			p->drawRect(groove.adjusted(0,0,-1,-1));				
 			p->setPen(cdata->bgShades[4]);
-			p->drawLine(grooveScaled.left()+1, grooveScaled.top()+1,
-						grooveScaled.left()+1, grooveScaled.bottom()-1);
-			p->drawLine(grooveScaled.left()+1, grooveScaled.top()+1,
-						grooveScaled.right()-1, grooveScaled.top()+1);
-
+			p->drawLine(groove.left()+1, groove.top()+1,
+						groove.left()+1, groove.bottom()-1);
+			p->drawLine(groove.left()+1, groove.top()+1,
+						groove.right()-1, groove.top()+1);
+			
 			p->restore();
 		}
 
-		if ((opt->subControls & SC_SliderHandle) && handle.isValid()) {
+		// Handle
+		if (slider->subControls & SC_SliderHandle) {
+			QRect handle = getScaledRect(proxy()->subControlRect(CC_Slider, slider, SC_SliderHandle, widget), dpr);
+			bool hovered = false;
+			if ((slider->state & State_MouseOver) && (slider->state & State_Enabled)) {
+				QPoint mousePos = widget ? widget->mapFromGlobal(QCursor::pos()) : QPoint();
+				SubControl sc = QCommonStyle::hitTestComplexControl(CC_Slider, slider, mousePos, widget);
+				if (sc == SC_SliderHandle)
+					hovered = true;
+			}
+
 			p->save();
-			QRect handleScaled; // use this name to avoid confusion
-			if (isScaled) {
-				handleScaled = getScaledRect(handle, dpr);
+			if (isScaled)
 				p->scale(inverseScale, inverseScale);
-				p->translate(0.5, 0.5);
-			} else
-				handleScaled = handle;
-			
+
+			// Background area (draw it underneath the white bevel border to ensure no gaps appear in QtQuick
+			p->fillRect(handle.adjusted(1,1,-1,-1),
+						opt->palette.brush(hovered ? QPalette::Midlight : QPalette::Button));
+
+			// Handle border
 			p->setPen(cdata->btnShades[6]);
-			p->drawLine(handleScaled.x() + 2, handleScaled.y(),
-						handleScaled.right() - 2, handleScaled.y());
-			p->drawLine(handleScaled.x(), handleScaled.y() + 2,
-						handleScaled.x(), handleScaled.bottom() - 2);
-			p->drawLine(handleScaled.right(), handleScaled.y() + 2,
-						handleScaled.right(), handleScaled.bottom() - 2);
-			p->drawLine(handleScaled.x() + 2, handleScaled.bottom(),
-						handleScaled.right() - 2, handleScaled.bottom());
-			p->drawPoint(handleScaled.x() + 1, handleScaled.y() + 1);
-			p->drawPoint(handleScaled.right() - 1, handleScaled.y() + 1);
-			p->drawPoint(handleScaled.right() - 1, handleScaled.bottom() - 1);
-			p->drawPoint (handleScaled.x() + 1, handleScaled.bottom() - 1);
+			p->drawLine(handle.x() + 2, handle.y(),
+						handle.right() - 2, handle.y());
+			p->drawLine(handle.x(), handle.y() + 2,
+						handle.x(), handle.bottom() - 2);
+			p->drawLine(handle.right(), handle.y() + 2,
+						handle.right(), handle.bottom() - 2);
+			p->drawLine(handle.x() + 2, handle.bottom(),
+						handle.right() - 2, handle.bottom());
+			p->drawPoint(handle.x() + 1, handle.y() + 1);
+			p->drawPoint(handle.right() - 1, handle.y() + 1);
+			p->drawPoint(handle.right() - 1, handle.bottom() - 1);
+			p->drawPoint (handle.x() + 1, handle.bottom() - 1);
 			  
-
+			// Handle bevel
 			p->setPen(cdata->btnShades[2]);
-			p->drawLine(handleScaled.x() + 2, handleScaled.bottom() - 1,
-						handleScaled.right() - 2, handleScaled.bottom() - 1);
-			p->drawLine(handleScaled.right() - 1, handleScaled.top() + 2,
-						handleScaled.right() - 1, handleScaled.bottom() - 2);
-			p->drawPoint (handleScaled.x() + 1, handleScaled.y());
-			p->drawPoint (handleScaled.right() - 1, handleScaled.y());
-			p->drawPoint (handleScaled.x(), handleScaled.y() + 1);
-			p->drawPoint (handleScaled.right(), handleScaled.y() + 1);
-			p->drawPoint (handleScaled.x(), handleScaled.bottom() - 1);
-			p->drawPoint (handleScaled.right(), handleScaled.bottom() - 1);
-			p->drawPoint (handleScaled.x() + 1, handleScaled.bottom() );
-			p->drawPoint (handleScaled.right() - 1, handleScaled.bottom());
-			  
+			p->drawLine(handle.x() + 2, handle.bottom() - 1,
+						handle.right() - 2, handle.bottom() - 1);
+			p->drawLine(handle.right() - 1, handle.top() + 2,
+						handle.right() - 1, handle.bottom() - 2);
+			p->drawPoint (handle.x() + 1, handle.y());
+			p->drawPoint (handle.right() - 1, handle.y());
+			p->drawPoint (handle.x(), handle.y() + 1);
+			p->drawPoint (handle.right(), handle.y() + 1);
+			p->drawPoint (handle.x(), handle.bottom() - 1);
+			p->drawPoint (handle.right(), handle.bottom() - 1);
+			p->drawPoint (handle.x() + 1, handle.bottom() );
+			p->drawPoint (handle.right() - 1, handle.bottom());			  
 			p->setPen(Qt::white);
-			p->drawLine (handleScaled.x() + 2, handleScaled.y() + 1,
-						 handleScaled.right() - 2, handleScaled.y() + 1);
-			p->drawLine (handleScaled.x() + 1, handleScaled.y() + 2,
-						 handleScaled.x() + 1, handleScaled.bottom() - 2);
+			p->drawLine (handle.x() + 2, handle.y() + 1,
+						 handle.right() - 2, handle.y() + 1);
+			p->drawLine (handle.x() + 1, handle.y() + 2,
+						 handle.x() + 1, handle.bottom() - 2);
 
-			//p->setBrush(opt->palette.button().color());
-			QRect fillr (handleScaled);
-			fillr.adjust(2, 2, -2, -2);			
-			p->fillRect (fillr, opt->palette.brush((opt->state & State_MouseOver) ? QPalette::Midlight : QPalette::Button));
-
-			if (sliderOpt->orientation == Qt::Horizontal) {
-				int x1 = handleScaled.x() + handleScaled.width() / 2 - 5;
-				int y1 = handleScaled.y() + (handleScaled.height() - 7) / 2;
+			// Stipple
+			if (slider->orientation == Qt::Horizontal) {
+				int x1 = handle.x() + handle.width() / 2 - 5;
+				int y1 = handle.y() + (handle.height() - 7) / 2;
 
 				p->setPen(cdata->btnShades[5]);
 				p->drawLine(x1 + 0, y1 + 4,
@@ -2497,8 +2476,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				p->drawLine(x1 + 8, y1 + 5,
 							x1 + 10, y1 + 3);
 			} else {
-				int x1 = handleScaled.x() + (handleScaled.width() - 7) / 2;
-				int y1 = handleScaled.y() + handleScaled.height() / 2 - 5;
+				int x1 = handle.x() + (handle.width() - 7) / 2;
+				int y1 = handle.y() + handle.height() / 2 - 5;
 
 				p->setPen(cdata->btnShades[5]);
 				p->drawLine(x1 + 4, y1 + 0,
@@ -2516,15 +2495,24 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				p->drawLine(x1 + 5, y1 + 8,
 							x1 + 3, y1 + 10);
 			}
-
+			
 			p->restore();
 		}
 
+		// Tick marks
 		if (opt->subControls & SC_SliderTickmarks) {
-			QStyleOptionComplex optCopy(*opt);
-			optCopy.subControls = SC_SliderTickmarks;
-			QCommonStyle::drawComplexControl(control, &optCopy, p, widget);
+			QStyleOptionSlider copy(*slider);
+			copy.subControls = SC_SliderTickmarks;
+			QCommonStyle::drawComplexControl(CC_Slider, &copy, p, widget);
 		}
+
+		// Focus rect
+		if (opt->state & State_HasFocus) {
+			QStyleOptionFocusRect focus;
+			focus.QStyleOption::operator=(*slider);
+			proxy()->drawPrimitive(PE_FrameFocusRect, &focus, p, widget);
+		}
+		
 		break;
 	}
 
@@ -2701,6 +2689,25 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
         }
         break;
 	}
+
+	case CC_ComboBox: {
+		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
+	    bool reverse = (opt->direction == Qt::RightToLeft);
+		switch (sc) {
+		case SC_ComboBoxArrow: {
+			ret.adjust(reverse ? 0 : -1, 0, reverse ? 1 : 0, 0);
+			break;
+		}
+		case SC_ComboBoxEditField: {
+			ret.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);
+			break;
+		}
+		default: {
+			break;
+		}
+		}
+		break;
+	}
 		
 	case CC_SpinBox: {		
 		const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
@@ -2747,22 +2754,25 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 		break;
 	}
 
-	case CC_ComboBox: {
-		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
-	    bool reverse = (opt->direction == Qt::RightToLeft);
-		switch (sc) {
-		case SC_ComboBoxArrow: {
-			ret.adjust(reverse ? 0 : -1, 0, reverse ? 1 : 0, 0);
+	case CC_Slider: {
+		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!slider)
 			break;
+
+		QStyleOptionSlider copy(*slider);
+		copy.rect.adjust(2,2,-2,-2); // Apply 2px of padding to the entire region to account for the focus rect
+		ret = QCommonStyle::subControlRect(CC_Slider, &copy, sc, widget); // Query the SC rect with modified opt
+
+		// Force the groove to 5px width
+		if (sc == SC_SliderGroove) {
+			QPoint center = ret.center();
+			if (slider->orientation == Qt::Horizontal)
+				ret.setHeight(5);
+			else
+				ret.setWidth(5);
+			ret.moveCenter(center);
 		}
-		case SC_ComboBoxEditField: {
-			ret.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);
-			break;
-		}
-		default: {
-			break;
-		}
-		}
+		
 		break;
 	}
 
@@ -2859,6 +2869,11 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 					ret = widget->height();
 			}
 		}
+		break;
+	}
+
+	case PM_SliderThickness: {
+		ret = 19;
 		break;
 	}
 
