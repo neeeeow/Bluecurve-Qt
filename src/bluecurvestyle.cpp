@@ -290,7 +290,9 @@ BluecurveStyle::polish(QWidget *widget)
 {
 	if (widget->inherits("QAbstractButton") ||
 		widget->inherits("QComboBox") ||
-		widget->inherits("QSplitterHandle"))
+		widget->inherits("QSplitterHandle") ||
+		widget->inherits("QSpinBox") ||
+		widget->inherits("QDateTimeEdit"))
 		widget->setAttribute(Qt::WA_Hover, true);
 
 	if (widget->inherits("QScrollBar") ||
@@ -587,94 +589,38 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	// -------------------------------------------------------------------
 	case PE_PanelButtonCommand:
 	case PE_PanelButtonBevel:
-	case PE_PanelButtonTool: {
+	case PE_PanelButtonTool:
+	case PE_IndicatorButtonDropDown: {
+		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+		if (!button)
+			break;
+		bool enabled = opt->state & State_Enabled;
+		
 		const QBrush *fill;
 
-		if (opt->state & State_Sunken)
+		if (enabled && (button->state & State_Sunken))
 			fill = &opt->palette.mid();
-		else if (opt->state & State_MouseOver)
+		else if (enabled && (button->state & State_MouseOver))
 			fill = &opt->palette.midlight();
-		else if (opt->state & State_On)
+		else if (enabled && (button->state & State_On))
 			fill = &opt->palette.mid();
-		else { // flat buttons should never be filled in
-			const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
-			fill = (button && (button->features & QStyleOptionButton::Flat)) ? 0 : &opt->palette.button();
-		}
+		else // flat buttons should never be filled in
+			fill = (button->features & QStyleOptionButton::Flat) ? nullptr : &opt->palette.button();
 
 		if (fill) // buttons with no fill should have no border
-			drawLightBevel(p, opt, fill, true, true);
+			drawLightBevel(p, button, fill, true, true);
 
-		if (const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt)) {
-			if (button->features & QStyleOptionButton::DefaultButton) {
-				p->save();
-				if (isScaled) {
-					p->scale(inverseScale, inverseScale);
-					p->translate(0.5, 0.5);
-				}				
-				p->setPen(Qt::black);
-				p->drawRect(r.adjusted(0,0,-1,-1));
-				p->restore();
-			}
-		}
-		
-		break;
-	}
-		
-	case PE_IndicatorButtonDropDown: {
-		p->save();
-		if (isScaled) {
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		}
-		
-		QBrush fill;
-		bool sunken =
-			(opt->state & (State_On | State_Sunken));
-		QRect br = r;
-
-		if (opt->state & State_Sunken)
-			fill = opt->palette.mid();
-		else if (opt->state & State_MouseOver)
-			fill = opt->palette.midlight();
-		else
-			fill = (opt->state & (State_On | State_Open)) ? opt->palette.mid()
-				: opt->palette.button(); 
-
-		p->setPen(sunken ? cdata->btnShades[6] : cdata->btnShades[4]);
-		p->drawLine(r.topLeft(), r.bottomLeft());
-		p->setPen(cdata->btnShades[6]);
-		p->drawLine(r.topLeft(),	 r.topRight());
-		p->drawLine(r.topRight(),	r.bottomRight());
-		p->drawLine(r.bottomRight(), r.bottomLeft());
-
-		if (opt->state & (State_On |
-						  State_Sunken | State_Raised)) {
-			// button bevel
-			p->setPen(sunken ? Qt::white : cdata->btnShades[2]);
-			p->drawLine(r.x() + r.width() - 2, r.y() + 2,
-						r.x() + r.width() - 2, r.y() + r.height() - 3); // right
-			p->drawLine(r.x() + 1, r.y() + r.height() - 2,
-						r.x() + r.width() - 2, r.y() + r.height() - 2); // bottom
-
-			p->setPen(sunken ? cdata->btnShades[2] : Qt::white);
-			p->drawLine(r.x() + 1, r.y() + 2,
-						r.x() + 1, r.y() + r.height() - 2); // left
-			p->drawLine(r.x() + 1, r.y() + 1,
-						r.x() + r.width() - 2, r.y() + 1); // top
-
-			br.adjust(2, 2, -2, -2);
-		} else {
-			br.adjust(1, 1, -1, -1);
+		if (button->features & QStyleOptionButton::DefaultButton) {
+			p->save();
+			if (isScaled) {
+				p->scale(inverseScale, inverseScale);
+				p->translate(0.5, 0.5);
+			}				
+			p->setPen(Qt::black);
+			p->drawRect(r.adjusted(0,0,-1,-1));
+			p->restore();
 		}
 
-		if (isScaled)
-			p->translate(-0.5, -0.5);
-
-		// fill
-		p->fillRect(br, fill);
-
-		p->restore();
-		
 		break;
 	}
 		
@@ -1095,21 +1041,20 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		break;
 	}
 	case PE_IndicatorHeaderArrow: {
-		// Little hack to always force State_Enabled, per the Qt3 theme
-		QStyleOption optCopy(*opt);
-		optCopy.state |= State_Enabled;
-		proxy()->drawPrimitive((opt->state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &optCopy, p, widget);
+		QStyleOption arrow(*opt);
+		arrow.state |= State_Enabled;
+		proxy()->drawPrimitive((arrow.state & State_UpArrow) ? PE_IndicatorArrowUp : PE_IndicatorArrowDown, &arrow, p, widget);
 		break;
 	}
 	case PE_IndicatorSpinUp:
 	case PE_IndicatorSpinDown: {
-		QStyleOption optCopy(*opt);
-	    optCopy.rect = opt->rect.adjusted(1,3,-3,-1);
+		QStyleOption arrow(*opt);
+	    arrow.rect.adjust(1,3,-3,-1);
 		
 		if (pe==PE_IndicatorSpinUp)
-			proxy()->drawPrimitive(PE_IndicatorArrowUp, &optCopy, p, widget);
+			proxy()->drawPrimitive(PE_IndicatorArrowUp, &arrow, p, widget);
 		else
-			proxy()->drawPrimitive(PE_IndicatorArrowDown, &optCopy, p, widget);
+			proxy()->drawPrimitive(PE_IndicatorArrowDown, &arrow, p, widget);
 		
 		break;
 	}
@@ -1478,7 +1423,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				default:
 					return;
 				}
-				QStyleOption arrowOpt = *toolbutton;
+				QStyleOption arrowOpt(*toolbutton);
 				arrowOpt.rect = rect;
 				proxy()->drawPrimitive(pe, &arrowOpt, p, widget);				
 			};
@@ -1926,10 +1871,9 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		// If the menu item does not have an icon and is checkable, draw a standard checkmark
 		if (!menuitem->icon.isNull()) {
 			if (checked) { // Draw the sunken background
-				QStyleOption checkFrame;
+				QStyleOption checkFrame(*menuitem);
 				checkFrame.rect = cr;
-				checkFrame.palette = menuitem->palette;
-				checkFrame.state = State_Enabled | State_Sunken;
+				checkFrame.state |= State_Sunken;
 				drawLightBevel(p, &checkFrame, active ? &menuitem->palette.midlight() : &menuitem->palette.mid(), true, true);
 			}
 			
@@ -1948,14 +1892,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			p->setPen(menuitem->palette.text().color());
 			p->drawPixmap(pmr.topLeft(), pixmap);
 		} else if (checked) {
-			QStyleOption check;
-			check.state = State_None;
-			if (enabled)
-				check.state |= State_Enabled;
-			if (active)
-				check.state |= State_On | State_Selected;
+			QStyleOption check(*menuitem);
 			check.rect = cr;
-			check.palette = menuitem->palette;
 			proxy()->drawPrimitive(PE_IndicatorMenuCheckMark, &check, p, widget);
 		}
 
@@ -1985,7 +1923,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 
 		if (menuitem->menuItemType == QStyleOptionMenuItem::SubMenu) {
-			QStyleOption arrow = *menuitem;
+			QStyleOption arrow(*menuitem);
 			arrow.rect = sr;
 			proxy()->drawPrimitive((reverse ? PE_IndicatorArrowLeft : PE_IndicatorArrowRight), &arrow, p, widget);
 		}
@@ -2281,7 +2219,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		field = proxy()->subControlRect(CC_ComboBox, opt, SC_ComboBoxEditField, widget);
 
 		// Combobox frame (same as standard button)
-		if (opt->subControls & SC_ComboBoxFrame) {
+		if (combobox->subControls & SC_ComboBoxFrame) {
 			QStyleOptionButton button;
 			button.QStyleOption::operator=(*combobox);
 			button.rect = frame;
@@ -2289,9 +2227,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		}
 
 		// Combobox arrow
-		if (opt->subControls & SC_ComboBoxArrow) {
+		if (combobox->subControls & SC_ComboBoxArrow) {
 			// Indicator arrow
-			QStyleOption arrowOpt = *combobox;
+			QStyleOption arrowOpt(*combobox);
 		    arrowOpt.rect = QRect(0,0,9,8);
 			arrowOpt.rect.moveCenter(arrow.center());
 			arrowOpt.rect.translate(0,-2);
@@ -2304,7 +2242,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		}
 
 		// Separator
-		if (opt->subControls & (SC_ComboBoxEditField | SC_ComboBoxArrow)) {
+		if ((combobox->subControls & SC_ComboBoxEditField) && (combobox->subControls & SC_ComboBoxArrow)) {
 		   bool reverse = (combobox->direction == Qt::RightToLeft);
 		   bool sunken = (combobox->state & (State_On | State_Sunken));
 
@@ -2331,7 +2269,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		}
 		
 		// Focus rect
-		if ((opt->subControls & SC_ComboBoxEditField) && (combobox->state & State_HasFocus) && !combobox->editable) {
+		if ((combobox->subControls & SC_ComboBoxEditField) && (combobox->state & State_HasFocus) && !combobox->editable) {
 			QStyleOptionFocusRect focus;
 			focus.QStyleOption::operator=(*combobox);
 			focus.rect = subElementRect(SE_ComboBoxFocusRect, combobox, widget);
@@ -2343,134 +2281,101 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 	}
 
 	case CC_SpinBox: {
-		const QStyleOptionSpinBox *spinboxOpt = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
-		QRect frame, up, down;
+		const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
+		if (!spinbox)
+			break;
 
-		frame = subControlRect(CC_SpinBox, opt, SC_SpinBoxFrame, widget);
-		
-		if ((opt->subControls & SC_SpinBoxFrame) && frame.isValid()) {
-			QStyleOption textOpt;
-			textOpt.state = opt->state | State_Sunken;
-			textOpt.rect = frame;
-			textOpt.palette = opt->palette;
-			drawTextRect(p, &textOpt, &opt->palette.base());
-		}	   
-
-		p->save();
-		if (isScaled) {
-			up = getScaledRect(subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget), dpr);
-			down = getScaledRect(subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget), dpr);
-			
-			p->scale(inverseScale, inverseScale);
-			p->translate(0.5, 0.5);
-		} else {
-			up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
-			down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
+		// Draw spin box text area
+		if (spinbox->frame && (spinbox->subControls & SC_SpinBoxFrame)) {
+			QStyleOption frame(*spinbox);
+			frame.rect = proxy()->subControlRect(CC_SpinBox, spinbox, SC_SpinBoxFrame, widget);
+			proxy()->drawPrimitive(PE_PanelLineEdit, &frame, p, widget);
 		}
 
-		p->setPen(cdata->btnShades[5]);
-		p->drawLine(up.topLeft(), down.bottomLeft());
-		p->drawLine(up.left(), up.bottom()+1, up.right(), up.bottom()+1);
-		p->restore();
+		// Up button
+		if (spinbox->subControls & SC_SpinBoxUp) {
+			QStyleOption spinBtn(*spinbox);
+			spinBtn.rect = proxy()->subControlRect(CC_SpinBox, spinbox, SC_SpinBoxUp, widget);
 
-		up = subControlRect(CC_SpinBox, opt, SC_SpinBoxUp, widget);
-		down = subControlRect(CC_SpinBox, opt, SC_SpinBoxDown, widget);
-		if ((opt->subControls & SC_SpinBoxUp) && up.isValid()) {
-			PrimitiveElement pe = PE_IndicatorSpinUp;
+			// Configure state/palette/fill for the spin button
+			const QBrush *fill;
+			QPalette pal = spinbox->palette;
+			if (!(spinbox->stepEnabled & QAbstractSpinBox::StepUpEnabled)) { // If the spin button is disabled, apply disabled state/palette
+				pal.setCurrentColorGroup(QPalette::Disabled);
+				spinBtn.state &= ~State_Enabled;
+			}
+			spinBtn.palette = pal;			
+			if (spinbox->activeSubControls == SC_SpinBoxUp && (spinbox->state & State_Sunken)) { // Set sunken/raised states as needed
+				spinBtn.state |= State_On;
+				spinBtn.state |= State_Sunken;
+				fill = &opt->palette.mid();
+			} else {
+				spinBtn.state |= State_Raised;
+				spinBtn.state &= ~State_Sunken;
+				fill = &opt->palette.button();
+			}
+			if ((spinbox->state & State_MouseOver) && (spinbox->state & State_Enabled)) { // Check if the button is being hovered
+				QPoint mousePos = widget ? widget->mapFromGlobal(QCursor::pos()) : QPoint();
+				SubControl sc = QCommonStyle::hitTestComplexControl(CC_SpinBox, spinbox, mousePos, widget);
+				if (sc == SC_SpinBoxUp) {
+					spinBtn.state |= State_MouseOver;
+					fill = &opt->palette.midlight();
+				}
+				else
+					spinBtn.state &= ~State_MouseOver;
+			}
 
-			if (spinboxOpt->buttonSymbols == QAbstractSpinBox::PlusMinus)
-				pe = PE_IndicatorSpinPlus;
+			// Draw the button
+			drawLightBevel(p, &spinBtn, fill, true);
 
-			up.adjust(1, 0, 0, 0);
-			p->fillRect(up, opt->palette.button());			
-			
-			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
-				p->setPen(cdata->btnShades[2]);
-			else
-				p->setPen(opt->palette.light().color());
-
-			p->save();
-
-			QRect upScaled;
-			if (isScaled) {
-				upScaled = getScaledRect(up, dpr);
-				p->scale(inverseScale, inverseScale);
-				p->translate(0.5, 0.5);
-			} else
-				upScaled = up;
-
-			p->drawLine(upScaled.left(), upScaled.top(), upScaled.right(), upScaled.top());
-			p->drawLine(upScaled.left(), upScaled.top(), upScaled.left(), upScaled.bottom());
-
-			if ((opt->activeSubControls == SC_SpinBoxUp) && (opt->state & State_Sunken))
-				p->setPen(opt->palette.light().color());
-			else
-				p->setPen(cdata->btnShades[2]);
-
-			p->drawLine(upScaled.right(), upScaled.top()+1, upScaled.right(), upScaled.bottom());
-			p->drawLine(upScaled.left()+1, upScaled.bottom(), upScaled.right(), upScaled.bottom());
-
-			p->restore();
-
-			up.adjust(1, 0, 0, 0);
-
-			QStyleOption indicatorOpt;
-			indicatorOpt.state =  opt->state | (((opt->activeSubControls == SC_SpinBoxUp) &&
-												 (opt->state & State_Sunken)) ? State_On |
-												State_Sunken : State_Raised);
-			indicatorOpt.rect = up;
-			indicatorOpt.palette = opt->palette;
-			drawPrimitive(pe, &indicatorOpt, p);
+			// Draw the indicator
+			spinBtn.rect.adjust(1, 1, -1, -1);
+			PrimitiveElement pe = (spinbox->buttonSymbols == QAbstractSpinBox::PlusMinus ? PE_IndicatorSpinPlus
+								   : PE_IndicatorSpinUp);
+			proxy()->drawPrimitive(pe, &spinBtn, p, widget);
 		}
 
-		if ((opt->subControls & SC_SpinBoxDown) && down.isValid()) {
-			PrimitiveElement pe = PE_IndicatorSpinDown;
+		// Down button
+		if (spinbox->subControls & SC_SpinBoxDown) {
+			QStyleOption spinBtn(*spinbox);
+			spinBtn.rect = proxy()->subControlRect(CC_SpinBox, spinbox, SC_SpinBoxDown, widget);
 
-			if (spinboxOpt->buttonSymbols == QAbstractSpinBox::PlusMinus)
-				pe = PE_IndicatorSpinMinus;
+			// Configure state/palette/fill for the spin button
+			const QBrush *fill;
+			QPalette pal = spinbox->palette;
+			if (!(spinbox->stepEnabled & QAbstractSpinBox::StepDownEnabled)) { // If the spin button is disabled, apply disabled state/palette
+				pal.setCurrentColorGroup(QPalette::Disabled);
+				spinBtn.state &= ~State_Enabled;
+			}
+			spinBtn.palette = pal;			
+			if (spinbox->activeSubControls == SC_SpinBoxDown && (spinbox->state & State_Sunken)) { // Set sunken/raised states as needed
+				spinBtn.state |= State_On;
+				spinBtn.state |= State_Sunken;
+				fill = &opt->palette.mid();
+			} else {
+				spinBtn.state |= State_Raised;
+				spinBtn.state &= ~State_Sunken;
+				fill = &opt->palette.button();
+			}
+			if ((spinbox->state & State_MouseOver) && (spinbox->state & State_Enabled)) { // Check if the button is being hovered
+				QPoint mousePos = widget ? widget->mapFromGlobal(QCursor::pos()) : QPoint();
+				SubControl sc = QCommonStyle::hitTestComplexControl(CC_SpinBox, spinbox, mousePos, widget);
+				if (sc == SC_SpinBoxDown) {
+					spinBtn.state |= State_MouseOver;
+					fill = &opt->palette.midlight();
+				}
+				else
+					spinBtn.state &= ~State_MouseOver;
+			}
 
-			down.adjust(1, 0, 0, 0);
-			p->fillRect(down, opt->palette.button());
+			// Draw the button
+			drawLightBevel(p, &spinBtn, fill, true);
 
-			if ((opt->activeSubControls == SC_SpinBoxDown) && (opt->state & State_Sunken))
-				p->setPen(cdata->btnShades[2]);
-			else
-				p->setPen(opt->palette.light().color());
-
-			p->save();
-
-			QRect downScaled;
-			if (isScaled) {
-				downScaled = getScaledRect(down, dpr);
-				p->scale(inverseScale, inverseScale);
-				p->translate(0.5, 0.5);
-			} else
-				downScaled = down;
-
-			p->drawLine(downScaled.left(), downScaled.top(), downScaled.right(), downScaled.top());
-			p->drawLine(downScaled.left(), downScaled.top(), downScaled.left(), downScaled.bottom());
-
-			if ((opt->activeSubControls == SC_SpinBoxDown) && (opt->state & State_Sunken))
-				p->setPen(opt->palette.light().color());
-			else
-				p->setPen(cdata->btnShades[2]);
-
-			p->drawLine(downScaled.right(), downScaled.top()+1,
-						downScaled.right(), downScaled.bottom());
-			p->drawLine(downScaled.left()+1, downScaled.bottom(),
-						downScaled.right(), downScaled.bottom());
-
-			p->restore();
-
-			down.adjust(1, 0, 0, 0);
-
-			QStyleOption indicatorOpt;
-			indicatorOpt.state =  opt->state | (((opt->activeSubControls == SC_SpinBoxDown) &&
-												 (opt->state & State_Sunken)) ? State_On |
-												State_Sunken : State_Raised);
-			indicatorOpt.rect = down;
-			indicatorOpt.palette = opt->palette;
-			drawPrimitive(pe, &indicatorOpt, p);
+			// Draw the indicator
+			spinBtn.rect.adjust(1, 1, -1, -1);
+			PrimitiveElement pe = (spinbox->buttonSymbols == QAbstractSpinBox::PlusMinus ? PE_IndicatorSpinMinus
+								   : PE_IndicatorSpinDown);
+			proxy()->drawPrimitive(pe, &spinBtn, p, widget);
 		}
 		
 		break;
@@ -2628,118 +2533,74 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		if (!toolbutton)
 			break;
 
-		QRect button, menuarea;
-		button = subControlRect(control, toolbutton, SC_ToolButton, widget);
-		menuarea = subControlRect(control, toolbutton, SC_ToolButtonMenu, widget);
+		// By default, Qt has both the main tool button and menu button highlight if the mouse hovers
+		// over it. Instead, here we have the tool and menu buttons behave independantly, as they do
+		// on GTK+2.0.
 
-		State bflags = toolbutton->state & ~State_Sunken;
+		const int fw = proxy()->pixelMetric(PM_DefaultFrameWidth, opt, widget);
 
-		if (bflags & State_AutoRaise) {
-			if (!(bflags & State_MouseOver) || !(bflags & State_Enabled)) {
-				bflags &= ~State_Raised;
-			}
-		}
-		State mflags = bflags;
-		if (toolbutton->state & State_Sunken) {
-			if (toolbutton->activeSubControls & SC_ToolButton)
-				bflags |= State_Sunken;
-			mflags |= State_Sunken;
-		}
+		// Check which widget is being hovered by the mouse (if any)
+		QPoint mousePos = widget ? widget->mapFromGlobal(QCursor::pos()) : QPoint();
+		SubControl hoveredControl = QCommonStyle::hitTestComplexControl(CC_ToolButton, toolbutton, mousePos, widget);
 
-		QStyleOption tool = *toolbutton;
+		// Main toolbutton
 		if (toolbutton->subControls & SC_ToolButton) {
-			if (bflags & (State_Sunken | State_On | State_Raised)) {
-				if (toolbutton->subControls & SC_ToolButtonMenu) {					
-					QBrush fill;
-					bool sunken =
-						(bflags & (QStyle::State_On | QStyle::State_Sunken));
-					QRect br = button;
+		    QStyleOptionButton button;
+			button.QStyleOption::operator=(*toolbutton);
+			button.rect = proxy()->subControlRect(CC_ToolButton, toolbutton, SC_ToolButton, widget);
 
-					if (bflags & QStyle::State_Sunken)
-						fill = opt->palette.mid();
-					else if (bflags & QStyle::State_MouseOver)
-						fill = opt->palette.midlight();
-					else
-						fill = (bflags & QStyle::State_On) ? opt->palette.mid()
-							: opt->palette.button();
+			// Set state flags
+			if (!(toolbutton->activeSubControls == SC_ToolButton) && (toolbutton->subControls & SC_ToolButtonMenu))
+				button.state &= ~(State_Sunken | State_On);
+			if (!((toolbutton->state & State_Enabled) && (hoveredControl == SC_ToolButton)))
+				button.state &= ~State_MouseOver;
+			if (button.state & State_AutoRaise && (!(button.state & State_MouseOver) || !(button.state & State_Enabled)))
+				button.state &= ~State_Raised;
 
-					p->save();
-					QRect buttonScaled; // use this name to avoid confusion
-					if (isScaled) {
-						buttonScaled = getScaledRect(button, dpr);
-						p->scale(inverseScale, inverseScale);
-						p->translate(0.5, 0.5);
-					} else
-						buttonScaled = button;
+			// Draw the button
+			if (button.state & (State_Sunken | State_On | State_Raised))
+				proxy()->drawPrimitive(PE_PanelButtonTool, &button, p, widget);
 
-					p->setPen(cdata->btnShades[6]);
-					p->drawLine(buttonScaled.topLeft(), buttonScaled.topRight());
-					p->drawLine(buttonScaled.topLeft(), buttonScaled.bottomLeft());
-					p->drawLine(buttonScaled.bottomLeft(), buttonScaled.bottomRight());
+			// Draw the label			
+			QStyleOptionToolButton label = *toolbutton;
+			label.state = button.state;
+			label.rect = button.rect.adjusted(fw, fw, -fw, -fw);
+			proxy()->drawControl(CE_ToolButtonLabel, &label, p, widget);
 
-					if (bflags & (QStyle::State_On |
-									  QStyle::State_Sunken | QStyle::State_Raised)) {
-						// buttonScaled bevel
-						p->setPen(sunken ? Qt::white : cdata->btnShades[2]);
-						if (sunken)
-							p->drawLine(buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + 2,
-										buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + buttonScaled.height() - 3); // right
-						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + buttonScaled.height() - 2,
-									buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + buttonScaled.height() - 2); // bottom
-
-						p->setPen(sunken ? cdata->btnShades[2] : Qt::white);
-						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + 2,
-									buttonScaled.x() + 1, buttonScaled.y() + buttonScaled.height() - 2); // left
-						p->drawLine(buttonScaled.x() + 1, buttonScaled.y() + 1,
-									buttonScaled.x() + buttonScaled.width() - 1, buttonScaled.y() + 1); // top
-
-					    br.adjust(2, 2, -1, -2);
-					} else {
-						br.adjust(1, 1, 0, -1);
-					}
-
-					p->restore();
-					p->fillRect(br, fill);
-					
-				} else {					
-					tool.rect = button;
-					tool.state = bflags;
-					drawPrimitive(PE_PanelButtonTool, &tool, p, widget);
-				}
+			// If there is no menu button, but a submenu is present, we draw an indicator arrow
+			// directly on the main tool button
+			if (toolbutton->features & QStyleOptionToolButton::HasMenu && !(toolbutton->subControls & SC_ToolButtonMenu)) {
+				int mbi = proxy()->pixelMetric(PM_MenuButtonIndicator, toolbutton, widget) - 5;
+				QStyleOption arrow = button;
+				arrow.rect = QRect(button.rect.right() + 1 - fw - mbi, button.rect.bottom() + 1 - fw - mbi, mbi, mbi);
+				arrow.rect = visualRect(toolbutton->direction, button.rect, arrow.rect);
+				proxy()->drawPrimitive(PE_IndicatorArrowDown, &arrow, p, widget);
 			}
 		}
 
-		if (toolbutton->state & State_HasFocus) {
-			QStyleOptionFocusRect fr;
-			fr.QStyleOption::operator=(*toolbutton);
-			fr.rect.adjust(3, 3, -3, -3);
-			if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
-				fr.rect.adjust(0, 0, -proxy()->pixelMetric(QStyle::PM_MenuButtonIndicator,
-														   toolbutton, widget), 0);
-			drawPrimitive(PE_FrameFocusRect, &fr, p, widget);
-		}
-		QStyleOptionToolButton label = *toolbutton;
-		label.state = bflags;
-		int fw = proxy()->pixelMetric(PM_DefaultFrameWidth, opt, widget);
-		label.rect = button.adjusted(fw, fw, -fw, -fw);
-		drawControl(CE_ToolButtonLabel, &label, p, widget);
-
+		// Menu button
 		if (toolbutton->subControls & SC_ToolButtonMenu) {
-			tool.rect = menuarea;
-			tool.state = mflags;
-			if (mflags & (State_Sunken | State_On | State_Raised))
-				drawPrimitive(PE_IndicatorButtonDropDown, &tool, p, widget);
-			drawPrimitive(PE_IndicatorArrowDown, &tool, p, widget);
-		} else if (toolbutton->features & QStyleOptionToolButton::HasMenu) {
-			int mbi = pixelMetric(PM_MenuButtonIndicator, toolbutton, widget);
-			QRect ir = toolbutton->rect;
-			QStyleOptionToolButton newBtn = *toolbutton;
-			newBtn.rect = QRect(ir.right() + 5 - mbi, ir.y() + ir.height() - mbi + 4, mbi - 6, mbi - 6);
-			newBtn.rect = visualRect(toolbutton->direction, button, newBtn.rect);
-			newBtn.rect.adjust(-1,-1,0,0);
-			drawPrimitive(PE_IndicatorArrowDown, &newBtn, p, widget);
-		}
+		    QStyleOptionButton button;
+			button.QStyleOption::operator=(*toolbutton);
+			button.rect = proxy()->subControlRect(CC_ToolButton, toolbutton, SC_ToolButtonMenu, widget);
 
+			// Set state flags
+		    if (!(toolbutton->activeSubControls == SC_ToolButtonMenu) && (toolbutton->subControls & SC_ToolButton))
+				button.state &= ~(State_Sunken | State_On);
+			if (!((toolbutton->state & State_Enabled) && (hoveredControl == SC_ToolButtonMenu)))
+				button.state &= ~State_MouseOver;
+			if (button.state & State_AutoRaise && (!(button.state & State_MouseOver) || !(button.state & State_Enabled)))
+				button.state &= ~State_Raised;
+
+			// Draw the button
+			if (button.state & (State_Sunken | State_On | State_Raised))
+				proxy()->drawPrimitive(PE_IndicatorButtonDropDown, &button, p, widget);
+
+			// Draw the indicator arrow
+			QStyleOption arrow = button;
+			arrow.rect.adjust(fw, fw, -fw, -fw);
+			proxy()->drawPrimitive(PE_IndicatorArrowDown, &arrow, p, widget);
+		}
 		break;
 	}
 		
@@ -2841,33 +2702,42 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
         break;
 	}
 		
-	case CC_SpinBox: {
+	case CC_SpinBox: {		
+		const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
+		if (!spinbox)
+			break;
+
 		// Button size
 		QSize bs;
-		bs.setHeight( opt->rect.height()/2 - 2 );
-		if ( bs.height() < 8 )
-			bs.setHeight( 8 );
-		bs.setWidth( bs.height() * 8 / 6 ); 
+		bs.setHeight(spinbox->rect.height()/2 + 1); // We add 1 to account for the overlap
+		bs.setWidth( bs.height() + 1);
 
 		// Button coordinates
-		int y = 1;
-		int x = opt->rect.width() - 1 - bs.width();
+		int x = spinbox->rect.x() + spinbox->rect.width() - bs.width();
+		int y = spinbox->rect.y();
 		
 		switch ( sc ) {
 		case SC_SpinBoxUp: {
-			ret.setRect(x, y, bs.width(), bs.height()+1);
+			if (spinbox->buttonSymbols == QAbstractSpinBox::NoButtons)
+				break;
+			ret.setRect(x, y, bs.width(), bs.height());
 			break;
 		}
 		case SC_SpinBoxDown: {
-			ret.setRect(x, y + bs.height()+2, bs.width(), bs.height()+1);
+			if (spinbox->buttonSymbols == QAbstractSpinBox::NoButtons)
+				break;
+			ret.setRect(x, y + bs.height() - 1, bs.width(), bs.height());
 			break;
 		}
 		case SC_SpinBoxEditField: {
-			ret = opt->rect.adjusted(0,0,-bs.width(),0);
+			if (spinbox->buttonSymbols == QAbstractSpinBox::NoButtons)
+				ret = spinbox->rect;
+			else
+				ret = spinbox->rect.adjusted(0, 0, -bs.width() + 1, 0);
 			break;
 		}
 		case SC_SpinBoxFrame: {
-			ret = opt->rect;
+			ret = spinbox->rect;
 		}
 		default: {
 			break;
