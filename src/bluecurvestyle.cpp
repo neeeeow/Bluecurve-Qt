@@ -2201,6 +2201,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 	const BluecurveColorData *cdata = lookupData(opt->palette);
 	
 	switch (control) {
+	// COMBOBOX
+	// -------------------------------------------------------------------
 	case CC_ComboBox: {
 		const QStyleOptionComboBox *combobox = qstyleoption_cast<const QStyleOptionComboBox *>(opt);
 		if (!combobox)
@@ -2274,6 +2276,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		break;
 	}
 
+	// SPINBOX
+	// -------------------------------------------------------------------		
 	case CC_SpinBox: {
 		const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
 		if (!spinbox)
@@ -2374,7 +2378,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		
 		break;
 	}
-		
+
+	// SLIDER
+	// -------------------------------------------------------------------		
 	case CC_Slider: {
 		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
 		if (!slider)
@@ -2516,6 +2522,8 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		break;
 	}
 
+	// TOOL BUTTON
+	// -------------------------------------------------------------------		
 	case CC_ToolButton: {
 		const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
 		if (!toolbutton)
@@ -2606,6 +2614,8 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 	QRect ret;
 	
 	switch (control) {
+	// SCROLLBAR
+	// -------------------------------------------------------------------
 	case CC_ScrollBar: {
 		/* taken from qcommonstyle.cpp */
 		if (const QStyleOptionSlider *scrollbar = qstyleoption_cast<const QStyleOptionSlider *>(opt)) {
@@ -2690,6 +2700,8 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
         break;
 	}
 
+	// COMBOBOX
+	// -------------------------------------------------------------------		
 	case CC_ComboBox: {
 		ret = QCommonStyle::subControlRect(control, opt, sc, widget);
 	    bool reverse = (opt->direction == Qt::RightToLeft);
@@ -2708,7 +2720,9 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 		}
 		break;
 	}
-		
+
+	// SPINBOX
+	// -------------------------------------------------------------------		
 	case CC_SpinBox: {		
 		const QStyleOptionSpinBox *spinbox = qstyleoption_cast<const QStyleOptionSpinBox *>(opt);
 		if (!spinbox)
@@ -2754,6 +2768,8 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 		break;
 	}
 
+	// SLIDER
+	// -------------------------------------------------------------------		
 	case CC_Slider: {
 		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
 		if (!slider)
