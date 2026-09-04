@@ -2805,50 +2805,109 @@ int
 BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 							const QWidget *widget) const
 {
-	int ret;
+	int ret = 0;
 
 	switch (metric) {
-	case PM_ButtonMargin: {
+	// BUTTONS
+	// -------------------------------------------------------------------
+	case PM_ButtonMargin:
 		ret = 10;
 		break;
-	}
 		
-	case PM_ButtonDefaultIndicator: {
+	case PM_ButtonDefaultIndicator:
 		ret = 0;
 		break;
-	}
 
-	case PM_MenuButtonIndicator: {
-		if (! widget)
-			ret = 12;
-		else
-			ret = std::max(12, (widget->height() - 4) / 3);
+	case PM_MenuButtonIndicator:
+		ret = opt ? std::max(12, (opt->rect.height() - 4) / 3) : 12;
 		break;
-	}
 
 	case PM_ButtonShiftHorizontal:
-	case PM_ButtonShiftVertical: {
+	case PM_ButtonShiftVertical:
 		ret = 0;
 		break;
-	}
 
-	case PM_MaximumDragDistance: {
-		ret = -1;
+	case PM_ButtonIconSize:
+		ret = 20;
 		break;
-	}
 
-	case PM_ScrollBarExtent: {
+	// CHECKBOXES / RADIO BUTTONS
+	// -------------------------------------------------------------------
+	case PM_IndicatorWidth:
+	case PM_IndicatorHeight:
+	case PM_ExclusiveIndicatorWidth:
+	case PM_ExclusiveIndicatorHeight:
+		ret = 13;
+		break;
+
+	// SPLITTERS
+	// -------------------------------------------------------------------
+	case PM_DockWidgetSeparatorExtent:
+	case PM_SplitterWidth:
+		ret = 6;
+		break;
+
+	case PM_DockWidgetHandleExtent:
+		ret = 10;
+		break;
+
+	// TABS
+	// -------------------------------------------------------------------
+	case PM_TabBarTabOverlap:
+		ret = 1;
+		break;
+
+	case PM_TabBarTabHSpace:
+		ret = 11;
+		break;
+
+	case PM_TabBarTabVSpace:
+		ret = 13;
+		break;
+
+	case PM_TabBarBaseHeight:
+		ret = 0;
+		break;
+
+	case PM_TabBarBaseOverlap:
+		ret = 2;
+		break;
+
+	case PM_TabBarTabShiftVertical:
+		ret = 0;
+		break;
+
+	// MENUS
+	// -------------------------------------------------------------------
+	case PM_MenuBarPanelWidth:
+		ret = 1;
+		break;
+
+	case PM_MenuPanelWidth:
+		ret = 3;
+		break;
+		
+	case PM_MenuVMargin:
+		ret = 1;
+		break;
+
+	case PM_SubMenuOverlap:
+		ret = 2;
+		break;
+
+	// SCROLLBAR
+	// ------------------------------------------------------------------------
+	case PM_ScrollBarExtent:
 		ret = 15;
 		break;
-	}
-
-	case PM_ScrollBarSliderMin: {
-		ret=31;
+		
+	case PM_ScrollBarSliderMin:
+		ret = 31;
 		break;
-	}
 
+	// SLIDER
+	// ------------------------------------------------------------------------
 	case PM_SliderControlThickness: {
-		/* Taken from Qt3 QMotifStyle */
 	    const QStyleOptionSlider *sl = qstyleoption_cast<const QStyleOptionSlider *>(opt);
 		if (!sl)
 			break;
@@ -2863,129 +2922,59 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 			break;
 	    }
 
-	    int thick = 6;	// Magic constant to get 5 + 16 + 5
+		int thick = 6;        // Magic constant to get 5 + 16 + 5
+		if (ticks != QSlider::TicksBothSides && ticks != QSlider::NoTicks)
+			thick += proxy()->pixelMetric(PM_SliderLength, sl, widget) / 4;
 
-	    space -= thick;
-	    //### the two sides may be unequal in size
-	    if ( space > 0 )
+		space -= thick;
+		if (space > 0)
 			thick += (space * 2) / (n + 2);
-	    ret = thick;
+		ret = thick;
 		break;
 	}
 		
 	case PM_SliderLength: {
 		ret=31;
-		if (widget && widget->inherits("QSlider")) {
-			const QSlider *slider = static_cast<const QSlider*>(widget);
-			if (slider->orientation() == Qt::Horizontal) {
-				if (widget->width()<ret)
-					ret = widget->width();
-			} else {
-				if (widget->height()<ret)
-					ret = widget->height();
-			}
+		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
+		if (!slider)
+			break;
+		
+		if (slider->orientation == Qt::Horizontal) {
+			if (slider->rect.width()<ret)
+				ret = slider->rect.width();
+		} else {
+			if (slider->rect.height()<ret)
+				ret = slider->rect.height();
 		}
 		break;
 	}
 
-	case PM_SliderThickness: {
+	case PM_SliderThickness:
 		ret = 19;
 		break;
-	}
 
-	case PM_DockWidgetSeparatorExtent:
-	case PM_SplitterWidth: {
-		ret = 6;
-		break;
-	}
-
-	case PM_DockWidgetHandleExtent: {
-		ret = 10;
-		break;
-	}
-
-	case PM_MenuBarPanelWidth: {
-		ret = 1;
-		break;
-	}
-
-	case PM_ToolBarItemSpacing: {
-		ret = 0;
-		break;
-	}
-
-	case PM_TabBarTabOverlap: {
-		ret = 1;
-		break;
-	}
-
-	case PM_TabBarTabHSpace: {
-		ret = 11;
-		break;
-	}
-
-	case PM_TabBarTabVSpace: {
-		ret = 13;
-		break;
-	}
-
-	case PM_TabBarBaseHeight: {
-		ret = 0;
-		break;
-	}
-
-	case PM_TabBarBaseOverlap: {
-		ret = 2;
-		break;
-	}
-
-	case PM_TabBarTabShiftVertical: {
-		ret = 0;
-		break;
-	}
-
-	case PM_ProgressBarChunkWidth: {
-		ret = 2;
-		break;
-	}
-
-	case PM_IndicatorWidth:
-	case PM_IndicatorHeight:
-	case PM_ExclusiveIndicatorWidth:
-	case PM_ExclusiveIndicatorHeight: {
-		ret = 13;
-		break;
-	}
-
-	case PM_MenuPanelWidth: {
-		ret = 3;
-		break;
-	}
+	// GENERAL
+	// ------------------------------------------------------------------------
 		
-	case PM_MenuVMargin: {
-		ret = 1;
+	case PM_MaximumDragDistance:
+		ret = -1;
 		break;
-	}
 
-	case PM_HeaderMarkSize: {
+	case PM_ToolBarItemSpacing:
+		ret = 0;
+		break;
+
+	case PM_ProgressBarChunkWidth:
+		ret = 2;
+		break;
+
+	case PM_HeaderMarkSize:
 		ret = 32;
 		break;
-	}
-
-	case PM_ButtonIconSize: {
-		ret = 20;
-		break;
-	}
-
-	case PM_SubMenuOverlap: {
-		ret = 2;
-		break;
-	}
 		
-	default: {
+	default:
 		ret = QCommonStyle::pixelMetric(metric, opt, widget);
 		break;
-	}
 	}
 
 	return ret;
