@@ -47,6 +47,7 @@
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
+#define MENU_BUTTON_WIDTH 25
 #define DARK_FACTOR 0.7
 #define DISABLED_ICON_SATURATION 0.8
 
@@ -1818,6 +1819,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		const int tab = menuitem->tabWidth;
 #endif
 		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
+		const int xthickness = 4;
 		const int itemHMargin = 4;
 		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
 		const int arrowHeight = 9;
@@ -1856,17 +1858,17 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		// compute rects
 		int x,y,w,h;
 		menuitem->rect.getRect(&x,&y,&w,&h);
-		QRect cr(x, y, checkcol, h); // Check mark rect
-		QRect sr(x + w - arrowWidth - itemHMargin, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
-		QRect tr(sr.left() - tab - itemHMargin, y, tab, h); // tab/accelerator rect
-		QRect ir(cr.right() + itemHMargin, y, tr.left() - cr.right() - 2 * itemHMargin - x, h); // main text rect
+		QRect cr(x + xthickness, y, checkcol, h); // Check mark rect
+		QRect sr(x + w - xthickness - arrowWidth, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
+		QRect tr(sr.left() - itemHMargin - tab, y, tab, h); // tab/accelerator rect
+		QRect ir(cr.right() + itemHMargin, y, tr.left() - cr.right() - 2 * itemHMargin, h); // main text rect
 		if ( reverse ) {
 			cr = visualRect( opt->direction, menuitem->rect, cr );
 			sr = visualRect( opt->direction, menuitem->rect, sr );
 			tr = visualRect( opt->direction, menuitem->rect, tr );
 			ir = visualRect( opt->direction, menuitem->rect, tr );
 		}
-
+		
 		// If the menu item has an icon and is checkable, draw a sunken shaded rect around the icon if checked
 		// If the menu item does not have an icon and is checkable, draw a standard checkmark
 		if (!menuitem->icon.isNull()) {
@@ -2593,8 +2595,9 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 				proxy()->drawPrimitive(PE_IndicatorButtonDropDown, &button, p, widget);
 
 			// Draw the indicator arrow
+			const int bm = proxy()->pixelMetric(PM_ButtonMargin, toolbutton, widget);
 			QStyleOption arrow = button;
-			arrow.rect.adjust(fw, fw, -fw, -fw);
+			arrow.rect.adjust(fw + bm - 1, fw + bm - 1, -fw - bm + 1, -fw - bm + 1);
 			proxy()->drawPrimitive(PE_IndicatorArrowDown, &arrow, p, widget);
 		}
 		break;
@@ -2614,13 +2617,37 @@ BluecurveStyle::subControlRect(ComplexControl control, const QStyleOptionComplex
 	QRect ret;
 	
 	switch (control) {
+	// TOOLBUTTON
+	// -------------------------------------------------------------------
+	case CC_ToolButton: {
+		const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+		if (!toolbutton)
+			break;
+
+		ret = toolbutton->rect;
+		switch (sc) {
+		case SC_ToolButton:
+		    if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
+				ret.adjust(0, 0, - MENU_BUTTON_WIDTH, 0);
+			break;
+		case SC_ToolButtonMenu:
+		    if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
+				ret.adjust(ret.width() - MENU_BUTTON_WIDTH, 0, 0, 0);
+			break;
+		default:
+			break;
+		}
+		ret = visualRect(toolbutton->direction, toolbutton->rect, ret);
+		break;
+	}
+		
 	// SCROLLBAR
 	// -------------------------------------------------------------------
 	case CC_ScrollBar: {
 		/* taken from qcommonstyle.cpp */
 		if (const QStyleOptionSlider *scrollbar = qstyleoption_cast<const QStyleOptionSlider *>(opt)) {
             const QRect scrollBarRect = scrollbar->rect;
-            int sbextent = pixelMetric(PM_ScrollBarExtent, scrollbar, widget);
+            int sbextent = proxy()->pixelMetric(PM_ScrollBarExtent, scrollbar, widget);
             int maxlen = ((scrollbar->orientation == Qt::Horizontal) ?
                           scrollBarRect.width() : scrollBarRect.height()) - (sbextent * 2) + 2;
             int sliderlen;
@@ -2809,11 +2836,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 
 	switch (metric) {
 	// BUTTONS
-	// -------------------------------------------------------------------
-	case PM_ButtonMargin:
-		ret = 10;
-		break;
-		
+	// -------------------------------------------------------------------		
 	case PM_ButtonDefaultIndicator:
 		ret = 0;
 		break;
@@ -2967,7 +2990,7 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 	case PM_ProgressBarChunkWidth:
 		ret = 2;
 		break;
-
+		
 	case PM_HeaderMarkSize:
 		ret = 32;
 		break;
@@ -2986,111 +3009,127 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 								 const QSize &contentsSize,
 								 const QWidget *widget) const
 {
-	QSize ret = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget );
+	//QSize ret = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget );
+	QSize size(contentsSize);
 
 	switch (contents) {
+	// BUTTONS
+	// -------------------------------------------------------------------
 	case CT_PushButton: {
-		const QStyleOptionButton *buttonOpt = qstyleoption_cast<const QStyleOptionButton *>(opt);
-		int w = ret.width(), h = ret.height();
+		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
+		if (!button)
+			break;
 
-		// only expand the button if we are displaying text...
-		if (buttonOpt->icon.isNull()) {
-			if ( w < 85 )
-				w = 85;
-			if ( h < 30 )
-				h = 30;
-		}
+		size = QCommonStyle::sizeFromContents( contents, button, contentsSize, widget );
+		if (!button->text.isEmpty()) // We only expand buttons with text, leave icon only buttons as they are
+			size = size.expandedTo(QSize(85, 27)); // Minimum button size in GTK+2.0
 		
-		ret = QSize( w, h );
-		break;
-	}
-
-	case CT_MenuItem:
-	case CT_MenuBarItem: {
-		const QStyleOptionMenuItem *miOpt = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
-		int w = contentsSize.width(), h = contentsSize.height();
-
-		if (miOpt->menuItemType == QStyleOptionMenuItem::Separator) {
-			w = 10;
-			h = 12;
-		} else {
-			// check is at least 16x16
-			if (h < 16) {
-				h = 16;
-			}
-
-			h = std::max({h, opt->fontMetrics.height() + 10, pixelMetric(PM_SmallIconSize) + 8});
-		}
-
-		// check is at least 16x16
-		if (contents == CT_MenuItem)
-			w += std::max(miOpt->maxIconWidth, 16) + 16;
-		else
-			w += 16;
-
-		if (!miOpt->text.isNull() && miOpt->text.indexOf('\t') >= 0)
-			w += 8;
-
-		ret = QSize(w, h);
 		break;
 	}
 
 	case CT_ToolButton: {
-		int w = ret.width(), h = ret.height();
-		h = (h < 32 ? 32 : h);
-		w = (w < 32 ? 32 : w);
-		ret = QSize(w, h);
+		const QStyleOptionToolButton *toolbutton = qstyleoption_cast<const QStyleOptionToolButton *>(opt);
+		if (!toolbutton)
+			break;
+
+		const int fw = proxy()->pixelMetric(PM_DefaultFrameWidth, toolbutton, widget);
+		const int buttonMargin = proxy()->pixelMetric(PM_ButtonMargin, toolbutton, widget);
+	   
+		if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
+		    size.rwidth() -= proxy()->pixelMetric(PM_MenuButtonIndicator, toolbutton, widget);			
+		size = QSize(size.width() + fw*2 + buttonMargin, size.height() + fw*2 + buttonMargin).expandedTo(QSize(32, 32));
+		if (toolbutton->features & QStyleOptionToolButton::MenuButtonPopup)
+			size.rwidth() += MENU_BUTTON_WIDTH; // Fixed width for menu button
+		
 		break;
 	}
 
+	// MENU ITEMS
+	// -------------------------------------------------------------------
+	case CT_MenuItem:
+	case CT_MenuBarItem: {
+		const QStyleOptionMenuItem *menuitem = qstyleoption_cast<const QStyleOptionMenuItem *>(opt);
+		if (!menuitem)
+			break;
+
+		// Set separator dimensions
+		if (menuitem->menuItemType == QStyleOptionMenuItem::Separator) {
+			size = QSize(10, 12);
+			break;
+		}
+
+		// Thickness consts taken from GTK 2 theme
+		const int xthickness = 4;
+		const int ythickness = 5;
+
+		// Set menuitem height
+		const int iconExtent = proxy()->pixelMetric(PM_SmallIconSize, menuitem, widget);
+		int h = std::max(menuitem->fontMetrics.height() + 2*ythickness,
+						 menuitem->icon.actualSize(QSize(iconExtent, iconExtent)).height());
+							
+		// Set menuitem width
+		int w = size.width() + 2*xthickness + 8;
+		if (contents == CT_MenuItem) {
+			const int maxpmw = menuitem->maxIconWidth;
+			const int itemHMargin = 4;
+			const int arrowWidth = 8;
+			w += arrowWidth + itemHMargin; // Add space reserved for submenu arrow
+			if (menuitem->text.contains(u'\t'))
+				w += itemHMargin; // Area to separate tab/accelerator text
+			if (maxpmw > 0)
+				w += maxpmw + itemHMargin; // Area for icon
+		}
+		
+		size = QSize(w,h);	
+		break;
+	}
+
+	case CT_CheckBox:
+	case CT_RadioButton: {
+		size = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget ) + QSize(4,0);
+		break;
+	}
+
+	// COMBO BOX
+	// -------------------------------------------------------------------
 	case CT_ComboBox: {
-		int w = ret.width(), h = ret.height();
-		if (h < 27)
-			h = 27;
-		ret = QSize(w, h);
+		size = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget ).expandedTo(QSize(0,27));
 		break;
 	}
 
+	// SPIN BOX
+	// -------------------------------------------------------------------
 	case CT_SpinBox: {
-		int w = ret.width(), h = ret.height();
-		if (h < 25)
-			h = 25;
-
-		ret = QSize(w, h);
-		break; 
-	}
-
-	case CT_SizeGrip: {
-		int size = std::max({ret.width(), ret.height(), 18});
-		ret = QSize(size,size);
+		size = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget ).expandedTo(QSize(0,25));
 		break;
 	}
 
+	// RESIZE GRIP
+	// -------------------------------------------------------------------
+	case CT_SizeGrip: {
+		size = size.expandedTo(QSize(18,18)); // SizeGrip has no QCommonStyle implementation
+		break;
+	}
+
+	// SLIDER
+	// -------------------------------------------------------------------
 	case CT_Slider: {
 		const QStyleOptionSlider *slider = qstyleoption_cast<const QStyleOptionSlider *>(opt);
 		if (!slider)
 			break;
 
-		int w = ret.width(), h = ret.height();
-		
-		if (slider->orientation == Qt::Horizontal) {
-			if (h < 17)
-				h = 17;	
-		} else {
-			if (w < 17)
-				w = 17;	
-		}
-
-		ret = QSize(w,h);
+		bool horizontal = (slider->orientation == Qt::Horizontal);		
+		size = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget ).expandedTo(QSize(horizontal ? 0 : 17, horizontal ? 17 : 0));
 		break;
 	}
 		
 	default: {
+		size = QCommonStyle::sizeFromContents(contents, opt, contentsSize, widget);
 		break;
 	}
 	}
 
-	return ret;
+	return size;
 }
 
 int
