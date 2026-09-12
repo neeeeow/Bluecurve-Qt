@@ -44,6 +44,7 @@
 #include <QRadioButton>
 #include <QGuiApplication>
 #include <QBitmap>
+#include <QDialogButtonBox>
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
@@ -3150,15 +3151,20 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 	case SH_Menu_MouseTracking:
 	case SH_MenuBar_MouseTracking:
 	case SH_ComboBox_ListMouseTracking:
+	case SH_ComboBox_Popup:
 	case SH_UnderlineShortcut:
-	case SH_ToolBar_Movable: {
-		ret = 1;
+	case SH_DialogButtonBox_ButtonsHaveIcons: {
+		ret = true;
 		break;
 	}
 		
-	case SH_MainWindow_SpaceBelowMenuBar:
-	case SH_Menu_AllowActiveAndDisabled: {
-		ret = 0;
+    case SH_Menu_SubMenuPopupDelay: { // default value used in GTK 2
+        ret = 225;
+        break;
+	}
+
+	case SH_DialogButtonLayout: {
+		ret = QDialogButtonBox::GnomeLayout;
 		break;
 	}
 	
