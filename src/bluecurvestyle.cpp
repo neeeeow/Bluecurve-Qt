@@ -1829,6 +1829,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		const int tab = menuitem->tabWidth;
 #endif
 		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
+		const int iconExtent = proxy()->pixelMetric(PM_SmallIconSize, opt, widget);
 		
 		bool enabled = menuitem->state & State_Enabled;
 		bool checked = menuitem->checkType != QStyleOptionMenuItem::NotCheckable
@@ -1865,7 +1866,8 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		int x,y,w,h;
 		menuitem->rect.getRect(&x,&y,&w,&h);
 		// NB: the space for the check mark and arrow indicator are *always* reserved
-		QRect cr(x + MENU_XTHICKNESS, y+2, checkcol, h-4); // Check mark rect
+	    const int crPadding = qBound(0, menuitem->rect.height() / 2, 2);
+		QRect cr(x + MENU_XTHICKNESS, y+crPadding, checkcol, h - crPadding*2); // Check mark rect
 		QRect sr(x + w - MENU_XTHICKNESS - MENU_ARROW_WIDTH, y + (h - MENU_ARROW_HEIGHT)/2, MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT); // arrow indicator rect		
 		QRect tr(sr.left() - MENU_HMARGIN - tab, y, tab, h); // tab/accelerator rect
 		QRect ir(cr.right() + MENU_HMARGIN, y, tr.left() - cr.right() - 2*MENU_HMARGIN, h); // main text rect
@@ -1885,14 +1887,13 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 				checkFrame.state |= State_Sunken;
 				drawLightBevel(p, &checkFrame, active ? &menuitem->palette.midlight() : &menuitem->palette.mid(), true, true);
 			}
-			
-			const auto size = proxy()->pixelMetric(PM_SmallIconSize, opt, widget);
+						
 			const auto state = checked ? QIcon::On : QIcon::Off;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-			QPixmap pixmap = menuitem->icon.pixmap(QSize(size,size), dpr, QIcon::Normal, state);
+			QPixmap pixmap = menuitem->icon.pixmap(QSize(iconExtent,iconExtent), dpr, QIcon::Normal, state);
 #else
 			QPixmap pixmap = menuitem->icon.pixmap(widget ? widget->window()->windowHandle() : nullptr,
-												   QSize(size,size), QIcon::Normal, state);
+												   QSize(iconExtent,iconExtent), QIcon::Normal, state);
 #endif
 			if (!enabled)
 				pixmap = pixmap_saturate_and_pixelate(pixmap, DISABLED_ICON_SATURATION, true);
