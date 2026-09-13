@@ -48,7 +48,16 @@
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
+
 #define MENU_BUTTON_WIDTH 25
+
+// GTK 2 menu consts
+#define MENU_XTHICKNESS 4
+#define MENU_YTHICKNESS 5
+#define MENU_HMARGIN 4
+#define MENU_ARROW_WIDTH 8
+#define MENU_ARROW_HEIGHT 9
+
 #define DARK_FACTOR 0.7
 #define DISABLED_ICON_SATURATION 0.8
 
@@ -1820,10 +1829,6 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		const int tab = menuitem->tabWidth;
 #endif
 		const int checkcol = qMax<int>(menuitem->maxIconWidth, 22);
-		const int xthickness = 4;
-		const int itemHMargin = 4;
-		const int arrowWidth = 8; // arrow size taken from GTK 2 theme
-		const int arrowHeight = 9;
 		
 		bool enabled = menuitem->state & State_Enabled;
 		bool checked = menuitem->checkType != QStyleOptionMenuItem::NotCheckable
@@ -1859,15 +1864,16 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		// compute rects
 		int x,y,w,h;
 		menuitem->rect.getRect(&x,&y,&w,&h);
-		QRect cr(x + xthickness, y, checkcol, h); // Check mark rect
-		QRect sr(x + w - xthickness - arrowWidth, y + (h - arrowHeight)/2, arrowWidth, arrowHeight); // Sub menu arrow indicator rect (NB: we must always reserve this width, since even menus with submenus can have accelerator texts)
-		QRect tr(sr.left() - itemHMargin - tab, y, tab, h); // tab/accelerator rect
-		QRect ir(cr.right() + itemHMargin, y, tr.left() - cr.right() - 2 * itemHMargin, h); // main text rect
+		// NB: the space for the check mark and arrow indicator are *always* reserved
+		QRect cr(x + MENU_XTHICKNESS, y+2, checkcol, h-4); // Check mark rect
+		QRect sr(x + w - MENU_XTHICKNESS - MENU_ARROW_WIDTH, y + (h - MENU_ARROW_HEIGHT)/2, MENU_ARROW_WIDTH, MENU_ARROW_HEIGHT); // arrow indicator rect		
+		QRect tr(sr.left() - MENU_HMARGIN - tab, y, tab, h); // tab/accelerator rect
+		QRect ir(cr.right() + MENU_HMARGIN, y, tr.left() - cr.right() - 2*MENU_HMARGIN, h); // main text rect
 		if ( reverse ) {
-			cr = visualRect( opt->direction, menuitem->rect, cr );
-			sr = visualRect( opt->direction, menuitem->rect, sr );
-			tr = visualRect( opt->direction, menuitem->rect, tr );
-			ir = visualRect( opt->direction, menuitem->rect, tr );
+			cr = visualRect( menuitem->direction, menuitem->rect, cr );
+			sr = visualRect( menuitem->direction, menuitem->rect, sr );
+			tr = visualRect( menuitem->direction, menuitem->rect, tr );
+			ir = visualRect( menuitem->direction, menuitem->rect, tr );
 		}
 		
 		// If the menu item has an icon and is checkable, draw a sunken shaded rect around the icon if checked
@@ -3059,26 +3065,20 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 			break;
 		}
 
-		// Thickness consts taken from GTK 2 theme
-		const int xthickness = 4;
-		const int ythickness = 5;
 
 		// Set menuitem height
 		const int iconExtent = proxy()->pixelMetric(PM_SmallIconSize, menuitem, widget);
-		int h = std::max(menuitem->fontMetrics.height() + 2*ythickness,
+		int h = std::max(menuitem->fontMetrics.height() + 2*MENU_YTHICKNESS,
 						 menuitem->icon.actualSize(QSize(iconExtent, iconExtent)).height());
 							
 		// Set menuitem width
-		int w = size.width() + 2*xthickness + 8;
+		int w = size.width() + 2*MENU_XTHICKNESS + 8;
 		if (contents == CT_MenuItem) {
 			const int maxpmw = menuitem->maxIconWidth;
-			const int itemHMargin = 4;
-			const int arrowWidth = 8;
-			w += arrowWidth + itemHMargin; // Add space reserved for submenu arrow
+			w += MENU_ARROW_WIDTH + MENU_HMARGIN; // Add space reserved for submenu arrow
+			w += qMax(maxpmw,22) + MENU_HMARGIN; // Area reserved for icon/checkmark
 			if (menuitem->text.contains(u'\t'))
-				w += itemHMargin; // Area to separate tab/accelerator text
-			if (maxpmw > 0)
-				w += maxpmw + itemHMargin; // Area for icon
+				w += MENU_HMARGIN; // Area to separate tab/accelerator text
 		}
 		
 		size = QSize(w,h);	
