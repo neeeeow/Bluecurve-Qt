@@ -3114,7 +3114,6 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 								 const QSize &contentsSize,
 								 const QWidget *widget) const
 {
-	//QSize ret = QCommonStyle::sizeFromContents( contents, opt, contentsSize, widget );
 	QSize size(contentsSize);
 
 	switch (contents) {
@@ -3162,7 +3161,6 @@ BluecurveStyle::sizeFromContents(ContentsType contents,
 			size = QSize(10, 12);
 			break;
 		}
-
 
 		// Set menuitem height
 		const int iconExtent = proxy()->pixelMetric(PM_SmallIconSize, menuitem, widget);
