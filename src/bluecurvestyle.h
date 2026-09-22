@@ -3,9 +3,9 @@
 #include <QCommonStyle>
 #include <QCache>
 #include <QPainter>
-#include <QStyleOptionTab>
 #include <QBitmap>
-#include <QPixmap>
+
+class QStyleOptionTab;
 
 class BluecurveStyle : public QCommonStyle
 {

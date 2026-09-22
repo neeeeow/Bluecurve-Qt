@@ -28,22 +28,8 @@
 
 #include "bluecurvestyle.h"
 
-#include <algorithm>
-
-#include <QStyleFactory>
-#include <QStyleOption>
-#include <QPushButton>
-#include <QPointer>
-#include <QEvent>
-#include <QMouseEvent>
-#include <QMenu>
-#include <QComboBox>
-#include <QScrollBar>
-#include <QProgressBar>
-#include <QCheckBox>
-#include <QRadioButton>
-#include <QGuiApplication>
 #include <QDialogButtonBox>
+#include <QStyleOptionTab>
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
@@ -1854,7 +1840,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		bool checked = menuitem->checkType != QStyleOptionMenuItem::NotCheckable
 			? menuitem->checked : false;
 		bool active = menuitem->state & State_Selected;
-		bool reverse = QGuiApplication::isRightToLeft();
+	    bool reverse = (menuitem->direction == Qt::RightToLeft);
 
 		// Separator
 		if ( menuitem->menuItemType == QStyleOptionMenuItem::Separator ) {
