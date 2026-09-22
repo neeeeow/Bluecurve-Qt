@@ -1,11 +1,10 @@
 #pragma once
 
 #include <QCommonStyle>
+#include <QStyleOptionTab>
 #include <QCache>
 #include <QPainter>
 #include <QBitmap>
-
-class QStyleOptionTab;
 
 class BluecurveStyle : public QCommonStyle
 {

@@ -30,7 +30,6 @@
 
 #include <QStyleOption>
 #include <QDialogButtonBox>
-#include <QStyleOptionTab>
 
 #define RADIO_SIZE 13
 #define CHECK_SIZE 13
