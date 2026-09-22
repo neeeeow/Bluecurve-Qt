@@ -87,7 +87,7 @@ private:
 	void drawGradient(QPainter *p, QRect const &rect, const QPalette &palette,
 					  double shade1, double shade2, bool horiz) const;
 	void drawGradientBox(QPainter *p, const QStyleOption *opt,
-						 const BluecurveColorData *cdata, bool horiz,
+						 const BluecurveColorData *cdata,
 						 double shade1, double shade2) const;
 
 	// Adjusts tab rectangle (taken from qwindowsstyle.cpp)

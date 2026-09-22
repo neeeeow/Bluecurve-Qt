@@ -1073,7 +1073,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	// PROGRESS CHUNK
 	// -------------------------------------------------------------------
 	case PE_IndicatorProgressChunk: {
-		drawGradientBox(p, opt, cdata, false, 0.92,1.66);
+		drawGradientBox(p, opt, cdata, 0.92, 1.66);
 		break;
 	}
 		
@@ -1857,9 +1857,11 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		}
 
 		// Menu background
-		if (enabled && active)
-			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
-		else 
+		if (enabled && active) {
+			QStyleOption gradient(*menuitem);
+			gradient.state |= State_Horizontal;
+			drawGradientBox(p, &gradient, cdata, 0.9, 1.2);
+		} else 
 			p->fillRect(opt->rect, opt->palette.button());
 
 		// compute rects
@@ -1952,9 +1954,11 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			break;
 
 		// Menu item background
-		if ((opt->state & State_Enabled) && (opt->state & State_Sunken))
-			drawGradientBox(p, opt, cdata, false, 0.9, 1.2);
-		else
+		if ((opt->state & State_Enabled) && (opt->state & State_Sunken)) {
+			QStyleOption gradient(*menuitem);
+			gradient.state |= State_Horizontal;
+			drawGradientBox(p, &gradient, cdata, 0.9, 1.2);
+		} else
 			p->fillRect(menuitem->rect, menuitem->palette.button());
 
 		// Draw the text
@@ -1986,45 +1990,52 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	}
 
 	case CE_ProgressBarContents: {
-		const QStyleOptionProgressBar *progressbar = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
-		if (!progressbar)
-			return;
-	    bool reverse = QGuiApplication::isRightToLeft();
+		const QStyleOptionProgressBar *bar = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
+		if (!bar)
+			return;		
 
-		QRect pr;
+		// progress bar properties
+		const bool indeterminate = (bar->minimum == 0 && bar->maximum == 0);
+		const bool horizontal = (bar->state & QStyle::State_Horizontal);
 
-		if ((progressbar->minimum == 0) && (progressbar->maximum == 0)) {
-			int w, remains;
+		// progress bar dimensions
+		int x,y,w,h;
+		bar->rect.getRect(&x,&y,&w,&h);
 
-			// draw busy indicator
+		// Compute the area over which to draw the bar
+		QRect progressBar;
+		if (indeterminate) {
+			int start, length, remains;
+			length = qBound(1, (horizontal ? w : h) / 2, 25);
+			remains = qMax((horizontal ? w : h) - length, 1);
+			start = bar->progress % (remains * 2);
+			if (start > remains)
+				start = 2 * remains - start;
 
-			w = std::min(25, opt->rect.width()/2);
-			w = std::max(w, 1);
-
-			remains = opt->rect.width() - w;
-			remains = std::max(remains, 1);
-
-			int x = progressbar->progress % (remains * 2);
-			if (x > remains)
-				x = 2 * remains - x;
-
-			x = reverse ? opt->rect.right() - x - w : x + opt->rect.left();
-			pr.setRect (x, opt->rect.top(), w, opt->rect.height());
-		} else {
-			int pos = progressbar->progress;
-			int total = (progressbar->maximum - progressbar->minimum) ?
-				(progressbar->maximum - progressbar->minimum) : 1;
-			int w = (int)(((double)pos*opt->rect.width())/total);
-
-			if (reverse)
-				pr.setRect (opt->rect.right() - w, opt->rect.top(), w, opt->rect.height());
+			if (horizontal)
+				progressBar = visualRect( bar->direction, bar->rect,
+										  QRect(x + start, y, length, h) );
 			else
-				pr.setRect (opt->rect.left(), opt->rect.top(), w, opt->rect.height());
+				progressBar.setRect(x, y + start, w, length);
+				
+		} else {
+			const int progress = qMax(bar->progress, bar->minimum);
+			const int totalSteps = qMax(Q_INT64_C(1), qint64(bar->maximum) - bar->minimum);
+            const int progressSteps = qint64(progress) - bar->minimum;
+            const int length = progressSteps * w / totalSteps;
+
+			if (horizontal)
+				progressBar = visualRect( bar->direction, bar->rect,
+										  QRect(x, y, length, h) );
+			else
+				progressBar.setRect(x,y,w,length);
+			
 		}
-		QStyleOption optCopy(*opt);
-		optCopy.rect = pr;
-		
-		drawGradientBox(p, &optCopy, cdata, false, 0.92, 1.66);
+
+		// Draw the progress bar
+		QStyleOption gradient(*bar);
+		gradient.rect = progressBar;
+		drawGradientBox(p, &gradient, cdata, 0.92, 1.66);
 		
 		break;
 	}	
@@ -3230,11 +3241,9 @@ BluecurveStyle::drawGradient(QPainter *p, QRect const &rect,
 void
 BluecurveStyle::drawGradientBox(QPainter *p, const QStyleOption *opt,
 								const BluecurveColorData *cdata,
-								bool horiz,
 								double shade1, double shade2) const
 {
-	p->save();
-	
+	p->save();	
 	const qreal dpr = getDpr(p);
 	QRect r;
 	if (!qFuzzyCompare(dpr, qreal(1))) {
@@ -3245,21 +3254,22 @@ BluecurveStyle::drawGradientBox(QPainter *p, const QStyleOption *opt,
 	} else {
 		r = opt->rect;
 	}
-	
-	QRect grad(r.left()+2, r.top()+2, r.width()-3, r.height()-3);
+
+	const bool horiz = !(opt->state & State_Horizontal); // If the widget is vertical, use a horizontal gradient
+	const QRect grad(r.left()+2, r.top()+2, r.width()-3, r.height()-3);
 	drawGradient(p, grad, opt->palette, shade1, shade2, horiz);
 
-// 3d border effect...
+	// 3d border effect...
 	p->setPen(cdata->spots[2]);
 	p->setBrush(Qt::NoBrush);
 	p->drawRect(r.adjusted(0,0,-1,-1));
 
-//	We draw the bottom and right lines first ...
+	//	We draw the bottom and right lines first ...
 	p->setPen(cdata->spots[1]);
 	p->drawLine(r.left()+1, r.bottom()-1, r.right()-1, r.bottom()-1);
 	p->drawLine(r.right()-1, r.top()+1, r.right()-1, r.bottom()-1);
 
-//	Because the lighter lines should overlap them on the corner pixels
+	//	Because the lighter lines should overlap them on the corner pixels
 	p->setPen(cdata->spots[0]);
 	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
 	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
