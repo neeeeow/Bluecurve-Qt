@@ -4,6 +4,8 @@
 #include <QCache>
 #include <QPainter>
 #include <QStyleOptionTab>
+#include <QBitmap>
+#include <QPixmap>
 
 class BluecurveStyle : public QCommonStyle
 {
@@ -55,22 +57,21 @@ private:
 		QColor bgShades[8]; // Shades computed using window color
 		QColor spots[3];
 
-		QPixmap *radioPix[8];
-		QBitmap *radioMask;
+		QPixmap radioPix[8];
+		QBitmap radioMask;
 
-		QPixmap *checkPix[6];
+		QPixmap checkPix[6];
       
-		QPixmap *checkMark[2];
-
-		~BluecurveColorData();
+		QPixmap checkMark[2];
 	  
 		bool isGroup (const QPalette &palette) {
-			return palette.button().color().rgb() == buttonColor && palette.highlight().color().rgb() == spotColor;
+			return palette.button().color().rgb() == buttonColor
+				&& palette.highlight().color().rgb() == spotColor;
 		}
 	};
 
 	QCache<long, BluecurveColorData> m_dataCache;
-	static const double shadeFactors[8];
+	static const qreal shadeFactors[8];
 
 	BluecurveColorData *realizeData (const QPalette &palette) const;
 	const BluecurveColorData *lookupData (const QPalette &palette) const;
@@ -84,11 +85,9 @@ private:
 						bool btnPal = false, bool dark = false) const;	
 
 	// Draws a Bluecurve style gradient rectangle
-	void drawGradient(QPainter *p, QRect const &rect, const QPalette &palette,
-					  double shade1, double shade2, bool horiz) const;
 	void drawGradientBox(QPainter *p, const QStyleOption *opt,
 						 const BluecurveColorData *cdata,
-						 double shade1, double shade2) const;
+						 qreal shade1, qreal shade2) const;
 
 	// Adjusts tab rectangle (taken from qwindowsstyle.cpp)
 	void tabLayout(const QStyleOptionTab *opt, const QWidget *widget,

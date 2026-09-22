@@ -43,7 +43,6 @@
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QGuiApplication>
-#include <QBitmap>
 #include <QDialogButtonBox>
 
 #define RADIO_SIZE 13
@@ -66,7 +65,7 @@
 
 #include "bits.h"
 
-const double BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768, 0.665, 0.4, 0.205};
+const qreal BluecurveStyle::shadeFactors[8] = {1.065, 0.963, 0.896, 0.85, 0.768, 0.665, 0.4, 0.205};
 
 static qreal
 getDpr(const QPainter *p)
@@ -85,28 +84,36 @@ getScaledRect(const QRect &rect, const qreal dpr)
 	return QRect(qRound(rect.x() * dpr), qRound(rect.y() * dpr), rect.width() * dpr, rect.height() * dpr);
 }
 
-static void
-shade (const QColor &ca, QColor &cb, double k)
+static QColor
+shade (const QColor &ca, const qreal k)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 	float h, s, l;
 #else
 	qreal h, s, l;
-#endif
-	
+#endif	
 	ca.getHslF(&h, &s, &l);
 
 	s *= k;
 	l *= k;
 
+	QColor cb;
 	cb.setHslF(h, qBound(0.0,s,1.0), qBound(0.0,l,1.0));
+	return cb;
 }
 
-static QImage *
+/* We assume this seldom collides, since we can only cache one at a time */
+static long
+hashColorGroup (const QPalette &palette)
+{
+	return palette.button().color().rgb() << 8 ^ palette.highlight().color().rgb();
+}
+
+
+static QImage
 generate_bit (unsigned char alpha[], const QColor &color, double mult)
 {
 	 unsigned int r, g, b;
-	 QImage *image;
 	 QRgb *pixels;
 	 int w, h;
 	 int x, y;
@@ -118,14 +125,14 @@ generate_bit (unsigned char alpha[], const QColor &color, double mult)
 	 b = (int) (color.blue() * mult);
 	 b = std::min<int>(b, 255);
   
-	 image = new QImage (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
+	 QImage image (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
 
-	 w = image->width();
-	 h = image->height();
+	 w = image.width();
+	 h = image.height();
 
 	 for (y=0; y < h; y++)
 	 {
-		  pixels = (QRgb *)image->scanLine(y);
+		  pixels = (QRgb *)image.scanLine(y);
 		  for (x=0; x < w; x++)
 			   pixels[x] = qRgba (r, g, b, alpha?alpha[y*w+x]:255);
 	 }
@@ -133,27 +140,23 @@ generate_bit (unsigned char alpha[], const QColor &color, double mult)
 	 return image;
 }
 
-static QImage *
+static QImage
 colorize_bit (unsigned char *bit,
               unsigned char *alpha,
               const QColor  &new_color)
 {
-	 QImage *image;
 	 double intensity;
 	 int x, y;
 	 const unsigned char *src, *asrc;
 	 QRgb *dest;
   
-	 image = new QImage (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
-
-	 if (image == NULL)
-		  return NULL;
+	 QImage image (RADIO_SIZE, RADIO_SIZE, QImage::Format_ARGB32);
   
 	 for (y = 0; y < RADIO_SIZE; y++)
 	 {
 		  src = bit + y * RADIO_SIZE;
 		  asrc = alpha + y * RADIO_SIZE;
-		  dest = (QRgb *)image->scanLine (y);
+		  dest = (QRgb *)image.scanLine (y);
 
 		  for (x = 0; x < RADIO_SIZE; x++)
 		  {
@@ -184,41 +187,34 @@ colorize_bit (unsigned char *bit,
 }
 
 static void
-composeImage (QImage *destImg, QImage *srcImg)
+composeImage (QImage &destImg, QImage &srcImg)
 {
-	 int w, h, x, y;
-	 QRgb *src, *dest;
-	 unsigned int a;
-	 QRgb s, d;
+	int w, h, x, y;
+	QRgb *src, *dest;
+	unsigned int a;
+	QRgb s, d;
 
-	 w = destImg->width();
-	 h = destImg->height();
+	w = destImg.width();
+	h = destImg.height();
 
-	 for (y = 0; y < h; y++)
-	 {
-		  src = (QRgb *)srcImg->scanLine(y);
-		  dest = (QRgb *)destImg->scanLine(y);
+	for (y = 0; y < h; y++)
+	{
+		src = (QRgb *)srcImg.scanLine(y);
+		dest = (QRgb *)destImg.scanLine(y);
 
-		  for (x = 0; x < w; x++)
-		  {
-			   s = src[x];
-			   d = dest[x];
+		for (x = 0; x < w; x++)
+		{
+			s = src[x];
+			d = dest[x];
           
-			   a = qAlpha(s);
+			a = qAlpha(s);
 
-			   dest[x] = qRgba ((qRed(s) * a + (255-a)*qRed(d)) / 255,
-								(qGreen(s) * a + (255-a)*qGreen(d)) / 255,
-								(qBlue(s) * a + (255-a)*qBlue(d)) / 255,
-								a + ((255-a)*qAlpha(d)) / 255);
-		  }
-	 }
-}
-
-/* We assume this seldom collides, since we can only cache one at a time */
-static long
-hashColorGroup (const QPalette &palette)
-{
-	return palette.button().color().rgb() << 8 ^ palette.highlight().color().rgb();
+			dest[x] = qRgba ((qRed(s) * a + (255-a)*qRed(d)) / 255,
+							 (qGreen(s) * a + (255-a)*qGreen(d)) / 255,
+							 (qBlue(s) * a + (255-a)*qBlue(d)) / 255,
+							 a + ((255-a)*qAlpha(d)) / 255);
+		}
+	}
 }
 
 static QPixmap
@@ -278,24 +274,6 @@ pixmap_saturate_and_pixelate(const QPixmap &src,
 	return QPixmap::fromImage(dest_img);
 }
 
-BluecurveStyle::BluecurveColorData::~BluecurveColorData()
-{
-	int i;
-
-	for (i = 0; i < 8; i++) {
-		if (radioPix[i] != 0)
-			delete radioPix[i];
-	}
-	
-	if (radioMask != 0)
-		delete radioMask;
-
-	for (i = 0; i < 6; i++) {
-		if (checkPix[i] != 0)
-			delete checkPix[i];
-	}
-}
-
 void
 BluecurveStyle::polish(QWidget *widget)
 {
@@ -326,15 +304,15 @@ BluecurveStyle::realizeData (const QPalette &palette) const
 	cdata->spotColor = palette.highlight().color().rgb();
 
 	for (i = 0; i < 8; i++) { // precompute the shade colors
-		shade (palette.button().color(), cdata->btnShades[i], shadeFactors[i]);
-		shade (palette.window().color(), cdata->bgShades[i], shadeFactors[i]);
+		cdata->btnShades[i] = shade(palette.button().color(), shadeFactors[i]);
+		cdata->bgShades[i] = shade(palette.window().color(), shadeFactors[i]);
 	}
 
-	shade (palette.highlight().color(), cdata->spots[0], 1.62);
-	shade (palette.highlight().color(), cdata->spots[1], 1.05);
-	shade (palette.highlight().color(), cdata->spots[2], 0.72);
+	cdata->spots[0] = shade(palette.highlight().color(), 1.62);
+	cdata->spots[1] = shade(palette.highlight().color(), 1.05);
+	cdata->spots[2] = shade(palette.highlight().color(), 0.72);
 
-	QImage *dot, *inconsistent, *outline, *circle, *check, *base;
+	QImage dot, inconsistent, outline, circle, check, base;
 
 	dot = colorize_bit (dot_intensity, dot_alpha, palette.highlight().color());
 	outline = generate_bit (outline_alpha, cdata->btnShades[6], 1.0);
@@ -348,7 +326,7 @@ BluecurveStyle::realizeData (const QPalette &palette) const
 			} else {
 				composite.fill (palette.midlight().color().rgb());
 			}
-			composeImage (&composite, outline);
+			composeImage (composite, outline);
 
 			if (j == 0) {
 				circle = generate_bit (circle_alpha, QColor(Qt::white), 1.0);
@@ -356,18 +334,17 @@ BluecurveStyle::realizeData (const QPalette &palette) const
 				circle = generate_bit (circle_alpha, cdata->btnShades[1], 1.0);
 			}
 
-			composeImage (&composite, circle);
-			delete circle;
+			composeImage (composite, circle);
 
-			cdata->radioPix[i*4+j*2+0] = new QPixmap (QPixmap::fromImage(composite));
+			cdata->radioPix[i*4+j*2+0] = QPixmap (QPixmap::fromImage(composite));
 
-			composeImage (&composite, dot);
-			cdata->radioPix[i*4+j*2+1] = new QPixmap (QPixmap::fromImage(composite));
+			composeImage (composite, dot);
+			cdata->radioPix[i*4+j*2+1] = QPixmap (QPixmap::fromImage(composite));
 		}
 	}
 
-	QImage mask = outline->createAlphaMask();
-	cdata->radioMask = new QBitmap (QBitmap::fromImage(mask));
+	QImage mask = outline.createAlphaMask();
+	cdata->radioMask = QBitmap (QBitmap::fromImage(mask));
 
 	check = generate_bit (check_alpha, palette.highlight().color(), 1.0);
 	inconsistent = generate_bit (check_inconsistent_alpha, palette.highlight().color(), 1.0);
@@ -380,30 +357,23 @@ BluecurveStyle::realizeData (const QPalette &palette) const
 		}
 
 		composite.fill (cdata->btnShades[6].rgb());
-		composeImage (&composite, base);
-		cdata->checkPix[i*3+0] = new QPixmap (QPixmap::fromImage(composite));
+		composeImage (composite, base);
+		cdata->checkPix[i*3+0] = QPixmap (QPixmap::fromImage(composite));
 
-		composeImage (&composite, check);
-		cdata->checkPix[i*3+1] = new QPixmap (QPixmap::fromImage(composite));
+		composeImage (composite, check);
+		cdata->checkPix[i*3+1] = QPixmap (QPixmap::fromImage(composite));
 
 		composite.fill (cdata->btnShades[6].rgb());
-		composeImage (&composite, base);
-		composeImage (&composite, inconsistent);
-		cdata->checkPix[i*3+2] = new QPixmap (QPixmap::fromImage(composite));
-
-		delete base;
+		composeImage (composite, base);
+		composeImage (composite, inconsistent);
+		cdata->checkPix[i*3+2] = QPixmap (QPixmap::fromImage(composite));
 	}	
 
     // GTK check marks - 0 is highlighted, 1 is normal 
 	check = generate_bit (checkmark, palette.highlightedText().color(), 1.0);
-	cdata->checkMark[0] = new QPixmap (QPixmap::fromImage(*check));
+	cdata->checkMark[0] = QPixmap (QPixmap::fromImage(check));
 	check = generate_bit (checkmark, palette.buttonText().color(), 1.0);
-	cdata->checkMark[1] = new QPixmap (QPixmap::fromImage(*check));
-
-	delete dot;
-	delete inconsistent;
-	delete outline;
-	delete check;
+	cdata->checkMark[1] = QPixmap (QPixmap::fromImage(check));
 	
 	return cdata;
 }
@@ -543,6 +513,55 @@ BluecurveStyle::drawLightBevel(QPainter *p, const QStyleOption *opt,
 			p->translate(-0.5, -0.5);		
 		p->fillRect(r.adjusted(2, 2, -2, -2), *fill);
 	}
+	p->restore();
+}
+
+void
+BluecurveStyle::drawGradientBox(QPainter *p, const QStyleOption *opt,
+								const BluecurveColorData *cdata,
+								qreal shade1, qreal shade2) const
+{
+	p->save();	
+	
+	const qreal dpr = getDpr(p);
+	QRect r; // Area over which to draw our gradient
+	bool isScaled = false;
+	if (!qFuzzyCompare(dpr, qreal(1))) {
+		isScaled = true;
+		const qreal inverseScale = qreal(1) / dpr;
+	    r = getScaledRect(opt->rect, dpr);
+		p->scale(inverseScale, inverseScale);
+	} else {
+		r = opt->rect;
+	}
+
+	// Gradient...
+	const bool horiz = !(opt->state & State_Horizontal); // If the widget is vertical, use a horizontal gradient
+	const QRect gradRect(r.left()+2, r.top()+2, r.width()-2, r.height()-2);
+	QLinearGradient gradient(0, 0, horiz ? 1 : 0, horiz ? 0 : 1);
+	gradient.setCoordinateMode(QGradient::ObjectBoundingMode);
+	gradient.setColorAt(0, shade(opt->palette.highlight().color(), shade1));
+	gradient.setColorAt(1, shade(opt->palette.highlight().color(), shade2));
+	p->fillRect(gradRect, gradient);
+
+	if (isScaled)
+		p->translate(0.5,0.5);
+
+	// 3d border effect...
+	p->setPen(cdata->spots[2]);
+	p->setBrush(Qt::NoBrush);
+	p->drawRect(r.adjusted(0,0,-1,-1));
+
+	//	We draw the bottom and right lines first ...
+	p->setPen(cdata->spots[1]);
+	p->drawLine(r.left()+1, r.bottom()-1, r.right()-1, r.bottom()-1);
+	p->drawLine(r.right()-1, r.top()+1, r.right()-1, r.bottom()-1);
+
+	//	Because the lighter lines should overlap them on the corner pixels
+	p->setPen(cdata->spots[0]);
+	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
+	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
+
 	p->restore();
 }
 
@@ -692,9 +711,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		QPoint qp = QPoint(r.center().x() - RADIO_SIZE/4, 
 						   r.center().y() - RADIO_SIZE/2);
 		if (opt->state & State_Selected)
-			p->drawPixmap(qp, *(cdata->checkMark[0]));
+			p->drawPixmap(qp, cdata->checkMark[0]);
 		else
-			p->drawPixmap(qp, *(cdata->checkMark[1]));
+			p->drawPixmap(qp, cdata->checkMark[1]);
 
 		p->restore();
 		break;		
@@ -710,7 +729,7 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		else if (opt->state & State_NoChange)
 			pix += 2;
 
-		QPixmap checkPix = *cdata->checkPix[pix];
+		QPixmap checkPix = cdata->checkPix[pix];
 		const int offset = r.width()/2 - checkPix.width()/2;
 
 		p->save();
@@ -738,9 +757,9 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 		if (opt->state & State_On)
 			pix += 1;
 		
-		radioPainter.drawPixmap(0,0, *cdata->radioPix[pix]);
+		radioPainter.drawPixmap(0,0, cdata->radioPix[pix]);
 		radioPainter.end();
-		radio.setMask(*cdata->radioMask);
+		radio.setMask(cdata->radioMask);
 		
 		p->save();
 		if (isScaled)
@@ -1992,11 +2011,12 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 	case CE_ProgressBarContents: {
 		const QStyleOptionProgressBar *bar = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
 		if (!bar)
-			return;		
+			break;		
 
 		// progress bar properties
 		const bool indeterminate = (bar->minimum == 0 && bar->maximum == 0);
-		const bool horizontal = (bar->state & QStyle::State_Horizontal);
+		const bool horizontal = bar->state & State_Horizontal;
+		const bool inverted = bar->invertedAppearance;
 
 		// progress bar dimensions
 		int x,y,w,h;
@@ -2022,7 +2042,7 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			const int progress = qMax(bar->progress, bar->minimum);
 			const int totalSteps = qMax(Q_INT64_C(1), qint64(bar->maximum) - bar->minimum);
             const int progressSteps = qint64(progress) - bar->minimum;
-            const int length = progressSteps * w / totalSteps;
+            const int length = progressSteps * (horizontal ? w : h) / totalSteps;
 
 			if (horizontal)
 				progressBar = visualRect( bar->direction, bar->rect,
@@ -2032,13 +2052,72 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 			
 		}
 
+		// Invert the progress bar if needed
+		if (inverted) {
+			if (horizontal)
+				progressBar.moveLeft(x + (w - (progressBar.x() - x) - progressBar.width()));
+			else
+				progressBar.moveTop(y + (h - (progressBar.y() - y) - progressBar.height()));
+		}
+
 		// Draw the progress bar
 		QStyleOption gradient(*bar);
 		gradient.rect = progressBar;
 		drawGradientBox(p, &gradient, cdata, 0.92, 1.66);
 		
 		break;
-	}	
+	}
+
+	case CE_ProgressBarLabel: {
+		const QStyleOptionProgressBar *bar = qstyleoption_cast<const QStyleOptionProgressBar *>(opt);
+		if (!bar)
+			break;
+
+		const QRect &rect = bar->rect;
+		QRect leftRect = rect;
+		QRect rightRect = rect;
+		QColor textColor = bar->palette.text().color();
+		QColor highlightedTextColor = bar->palette.highlightedText().color();
+
+		const bool vertical = !(bar->state & QStyle::State_Horizontal);
+		const bool inverted = bar->invertedAppearance;
+		const bool reverse = (bar->direction == Qt::RightToLeft) ^ inverted;
+		const int totalSteps = qMax(Q_INT64_C(1), qint64(bar->maximum) - bar->minimum);
+		const int progressSteps = qint64(bar->progress) - bar->minimum;
+		const int progressIndicatorPos = progressSteps * (vertical ? rect.height() : rect.width()) / totalSteps;
+
+		if (vertical) {
+			if (progressIndicatorPos >= 0 && progressIndicatorPos <= rect.height()) {
+				if (inverted) {
+					leftRect.setHeight(progressIndicatorPos);
+					rightRect.setY(progressIndicatorPos);
+				} else {
+					leftRect.setHeight(rect.height() - progressIndicatorPos);
+					rightRect.setY(rect.height() - progressIndicatorPos);
+				}
+			}
+		} else {
+			if (progressIndicatorPos >= 0 && progressIndicatorPos <= rect.width()) {
+				if (reverse) {
+					leftRect.setWidth(rect.width() - progressIndicatorPos);
+					rightRect.setX(rect.width() - progressIndicatorPos);
+				} else {
+					leftRect.setWidth(progressIndicatorPos);
+					rightRect.setX(progressIndicatorPos);
+				}
+			}
+		}
+
+		const auto firstIsHighlightedColor = (vertical && !inverted) || (!vertical && reverse);
+		p->setClipRect(rightRect);
+		p->setPen(firstIsHighlightedColor ? highlightedTextColor : textColor);
+		p->drawText(rect, bar->text, QTextOption(Qt::AlignAbsolute | Qt::AlignHCenter | Qt::AlignVCenter));
+		p->setPen(firstIsHighlightedColor ? textColor : highlightedTextColor);
+		p->setClipRect(leftRect);
+		p->drawText(rect, bar->text, QTextOption(Qt::AlignAbsolute | Qt::AlignHCenter | Qt::AlignVCenter));
+
+		break;
+	}
 
 	// RESIZE GRIP (adopted from Bluecurve GTK+2.0 theme engine)
 	// -------------------------------------------------------------------	
@@ -2188,19 +2267,26 @@ QRect
 BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 							   const QWidget *widget) const
 {
-	QRect rect = QCommonStyle::subElementRect(element, opt, widget);
+	QRect r = QCommonStyle::subElementRect(element, opt, widget);
 
 	switch (element) {
 	case SE_CheckBoxIndicator:
 	case SE_RadioButtonIndicator: {
-		rect.translate(2,0);
+		r.translate(2,0);
 		break;
 	}
 
 	case SE_ComboBoxFocusRect: {
-		bool reverse = (opt->direction == Qt::RightToLeft);
-		rect.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);		
+		const bool reverse = (opt->direction == Qt::RightToLeft);
+		r.adjust(reverse ? 3 : 0, 0, reverse ? 0 : -3, 0);		
 		break;		
+	}
+
+	case SE_ProgressBarLabel:
+    case SE_ProgressBarContents:
+    case SE_ProgressBarGroove: {
+        r = opt->rect;
+		break;
 	}
 		
 	default: {
@@ -2208,7 +2294,7 @@ BluecurveStyle::subElementRect(SubElement element, const QStyleOption *opt,
 	}
 	}
 
-	return rect;
+	return r;
 }
 
 void
@@ -3187,94 +3273,6 @@ BluecurveStyle::styleHint(StyleHint sh, const QStyleOption *opt,
 	}
 	
 	return ret;
-}
-
-void
-BluecurveStyle::drawGradient(QPainter *p, QRect const &rect,
-							 const QPalette &palette,
-							 double shade1, double shade2,
-							 bool horiz) const
-{
-	QColor c, c1, c2;
-	int r, g, b;
-	int c2r, c2g, c2b;
-	int dr, dg, db, size;
-	int start, end, left, right, top, bottom;
-
-	left = rect.left();
-	top = rect.top();
-	bottom = rect.bottom();
-	right = rect.right();
-
-	start = horiz ? left : top;
-	end = horiz ? right : bottom;
-
-	if (end == start)
-		return;
-
-	shade (palette.highlight().color(), c1, shade1);
-	shade (palette.highlight().color(), c2, shade2);
-
-	c1.getRgb(&r, &g, &b);
-	c2.getRgb(&c2r, &c2g, &c2b);
-
-	size = end - start;
-	dr = (c2r - r) / size;
-	dg = (c2g - g) / size;
-	db = (c2b - b) / size;
-
-	for (int i = start; i <= end; i++) {
-		c.setRgb (r, g, b);
-		p->setPen(c);
-		if (horiz)
-			p->drawLine(i, top, i, bottom);
-		else
-			p->drawLine(left, i, right, i);
-
-		r += dr;
-		g += dg;
-		b += db;
-	}	
-
-}
-
-void
-BluecurveStyle::drawGradientBox(QPainter *p, const QStyleOption *opt,
-								const BluecurveColorData *cdata,
-								double shade1, double shade2) const
-{
-	p->save();	
-	const qreal dpr = getDpr(p);
-	QRect r;
-	if (!qFuzzyCompare(dpr, qreal(1))) {
-		const qreal inverseScale = qreal(1) / dpr;
-		p->scale(inverseScale, inverseScale);
-		p->translate(0.5, 0.5);
-	    r = getScaledRect(opt->rect, dpr);
-	} else {
-		r = opt->rect;
-	}
-
-	const bool horiz = !(opt->state & State_Horizontal); // If the widget is vertical, use a horizontal gradient
-	const QRect grad(r.left()+2, r.top()+2, r.width()-3, r.height()-3);
-	drawGradient(p, grad, opt->palette, shade1, shade2, horiz);
-
-	// 3d border effect...
-	p->setPen(cdata->spots[2]);
-	p->setBrush(Qt::NoBrush);
-	p->drawRect(r.adjusted(0,0,-1,-1));
-
-	//	We draw the bottom and right lines first ...
-	p->setPen(cdata->spots[1]);
-	p->drawLine(r.left()+1, r.bottom()-1, r.right()-1, r.bottom()-1);
-	p->drawLine(r.right()-1, r.top()+1, r.right()-1, r.bottom()-1);
-
-	//	Because the lighter lines should overlap them on the corner pixels
-	p->setPen(cdata->spots[0]);
-	p->drawLine(r.left()+1, r.top()+1, r.right()-1, r.top()+1);
-	p->drawLine(r.left()+1, r.top()+1, r.left()+1, r.bottom()-1);
-
-	p->restore();
 }
 
 void
