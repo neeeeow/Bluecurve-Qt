@@ -28,6 +28,7 @@
 
 #include "bluecurvestyle.h"
 
+#include <QStyleOption>
 #include <QDialogButtonBox>
 #include <QStyleOptionTab>
 
