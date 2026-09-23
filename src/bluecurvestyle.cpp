@@ -2318,6 +2318,7 @@ BluecurveStyle::drawComplexControl(ComplexControl control, const QStyleOptionCom
 		if (combobox->subControls & SC_ComboBoxArrow) {
 			// Indicator arrow
 			QStyleOption arrowOpt(*combobox);
+			arrowOpt.state &= ~State_Selected;
 		    arrowOpt.rect = QRect(0,0,9,8);
 			arrowOpt.rect.moveCenter(arrow.center());
 			arrowOpt.rect.translate(0,-2);
