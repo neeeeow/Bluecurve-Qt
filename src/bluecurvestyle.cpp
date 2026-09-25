@@ -1186,6 +1186,27 @@ BluecurveStyle::drawControl(ControlElement control, const QStyleOption *opt,
 		break;
 	}
 
+	// RUBBER BAND
+	// -------------------------------------------------------------------
+	case CE_RubberBand: {
+		p->save();
+		if (isScaled) {
+			p->scale(inverseScale, inverseScale);
+			p->translate(0.5, 0.5);
+		}
+
+		const QColor penCol = opt->palette.highlight().color();
+	    QColor brushCol = penCol;
+		brushCol.setAlphaF(0.5);
+		
+		p->setPen(penCol);
+		p->setBrush(QBrush(brushCol));
+		p->drawRect(r.adjusted(0, 0, -1, -1));
+
+		p->restore();
+		break;
+	}
+
 	// SCROLLBAR
 	// -------------------------------------------------------------------
 	case CE_ScrollBarAddLine:
