@@ -12,7 +12,6 @@ class BluecurveStyle : public QCommonStyle
 
 public:
 	BluecurveStyle() = default;
-    ~BluecurveStyle() override = default;
 
 	void polish(QWidget *widget) override;
 
