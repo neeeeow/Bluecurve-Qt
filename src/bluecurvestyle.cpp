@@ -2976,13 +2976,14 @@ BluecurveStyle::pixelMetric(PixelMetric metric, const QStyleOption *opt,
 		ret = 13;
 		break;
 
-	// SPLITTERS
+	// SPLITTERS / HANDLES
 	// -------------------------------------------------------------------
 	case PM_DockWidgetSeparatorExtent:
 	case PM_SplitterWidth:
 		ret = 6;
 		break;
 
+	case PM_ToolBarHandleExtent:
 	case PM_DockWidgetHandleExtent:
 		ret = 10;
 		break;
