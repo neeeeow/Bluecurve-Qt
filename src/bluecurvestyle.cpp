@@ -608,25 +608,23 @@ BluecurveStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt,
 	case PE_PanelButtonTool:
 	case PE_IndicatorButtonDropDown: {
 		const QStyleOptionButton *button = qstyleoption_cast<const QStyleOptionButton *>(opt);
-		if (!button)
-			break;
 		bool enabled = opt->state & State_Enabled;
 		
 		const QBrush *fill;
 
-		if (enabled && (button->state & State_Sunken))
+		if (enabled && (opt->state & State_Sunken))
 			fill = &opt->palette.mid();
-		else if (enabled && (button->state & State_MouseOver))
+		else if (enabled && (opt->state & State_MouseOver))
 			fill = &opt->palette.midlight();
-		else if (enabled && (button->state & State_On))
+		else if (enabled && (opt->state & State_On))
 			fill = &opt->palette.mid();
 		else // flat buttons should never be filled in
-			fill = (button->features & QStyleOptionButton::Flat) ? nullptr : &opt->palette.button();
+			fill = (button && (button->features & QStyleOptionButton::Flat)) ? nullptr : &opt->palette.button();
 
 		if (fill) // buttons with no fill should have no border
-			drawLightBevel(p, button, fill, true, true);
+			drawLightBevel(p, opt, fill, true, true);
 
-		if (button->features & QStyleOptionButton::DefaultButton) {
+		if (button && (button->features & QStyleOptionButton::DefaultButton)) {
 			p->save();
 			if (isScaled) {
 				p->scale(inverseScale, inverseScale);
